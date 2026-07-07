@@ -1,0 +1,19 @@
+node_modules/
+.pnpm-store/
+dist/
+.turbo/
+coverage/
+# expo / rn
+.expo/
+*.orig.*
+web-build/
+ios/
+android/
+# graphify output (generated)
+graphify-out/
+# env & secrets
+.env
+.env.*.local
+.claude/settings.local.json
+# os
+.DS_Store
