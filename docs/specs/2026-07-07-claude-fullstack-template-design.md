@@ -35,6 +35,8 @@ Reanimated 4 essentials and gotchas.
 | 8 | Commit hook | **Reminder only** (never auto‑commit) |
 | 9 | External skills | **Vendor** (commit into repo) with preserved LICENSE + attribution: SWM `react-native-best-practices`, Vercel `react-native-guidelines`, `ui-ux-pro-max`, `ponytail` |
 | 10 | Animation strategy | Perspective transforms + Skia (no 3D engine); authored **`mobile-animations`** (how, recipe library) + **`motion-design-principles`** (when/why, Reduce‑Motion aware); Dynamic Island = in‑app simulated (core) + real Live Activities (optional, documented) |
+| 11 | Backend stack | **NestJS** (on Fastify adapter) + **Prisma** + `nestjs-zod` (reuse `packages/shared` zod schemas) |
+| 12 | Mobile E2E | **Maestro** |
 
 **Non‑goals (YAGNI):** monitoring stack (Sentry/Prometheus/Grafana); pre‑filled app code
 (`apps/*` ship empty and are scaffolded in Layer 0); the SWM `radon-mcp` server (not selected);
@@ -139,9 +141,12 @@ so only the needed guide is pulled into context.
 `mobile-api-integration`, `mobile-data-forms`, `mobile-i18n-theme`, `mobile-testing-release`,
 `expo-eas-pipeline`, **`mobile-animations`** (Reanimated v4 — see §10).
 
-**Backend (Node):**
-`api-design`, `nodejs-backend` (Fastify‑first, Express alt), `database-orm` (Prisma‑first, Drizzle alt),
-`backend-auth-security`, `backend-testing`.
+**Backend (NestJS):**
+`api-design`, `nestjs-backend` (modules/controllers/providers, DI, guards, pipes, DTOs; **Fastify
+adapter**; **`nestjs-zod` `ZodValidationPipe`** reusing `packages/shared` schemas),
+`database-orm` (**Prisma** via a `PrismaModule`/service, migrations, relations, query opt),
+`backend-auth-security` (Nest Guards/Passport, JWT/session, CORS/CSRF, secrets, OWASP),
+`backend-testing` (**Jest + Supertest**, Nest default; fixtures, mocking).
 
 **Motion / UX judgment:**
 `motion-design-principles` — decides **when/why** to animate vs. when to hold back (the taste layer),
@@ -199,8 +204,8 @@ Fresh clone (no design in docs/specs/)
 ## 9. Testing strategy
 | Level | When | Tool |
 |-------|------|------|
-| Unit | right after each task | Vitest (api/shared), Jest+RTL (mobile) |
-| Integration | end of layer | Vitest+Supertest (api), RTL (mobile) |
+| Unit | right after each task | Jest (api, Nest default), Vitest (shared), Jest+RTL (mobile) |
+| Integration | end of layer | Jest+Supertest (api), RTL (mobile) |
 | E2E | before release | Maestro (mobile), Supertest full‑flow (api) |
 
 ## 10. Animation stack (Reanimated v4)
