@@ -1,0 +1,4 @@
+{
+  "//": "Copy to settings.local.json (gitignored) for per-developer overrides/secrets.",
+  "env": { "EXPO_PUBLIC_API_URL": "http://localhost:3000" }
+}
