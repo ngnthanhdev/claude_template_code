@@ -34,6 +34,7 @@ Reanimated 4 essentials and gotchas.
 | 7 | Parallel task safety | **git worktree isolation** per `task-implementer` subagent |
 | 8 | Commit hook | **Reminder only** (never auto‑commit) |
 | 9 | External skills | **Vendor** (commit into repo) with preserved LICENSE + attribution: SWM `react-native-best-practices`, Vercel `react-native-guidelines`, `ui-ux-pro-max`, `ponytail` |
+| 10 | Animation strategy | Perspective transforms + Skia (no 3D engine); authored **`mobile-animations`** (how, recipe library) + **`motion-design-principles`** (when/why, Reduce‑Motion aware); Dynamic Island = in‑app simulated (core) + real Live Activities (optional, documented) |
 
 **Non‑goals (YAGNI):** monitoring stack (Sentry/Prometheus/Grafana); pre‑filled app code
 (`apps/*` ship empty and are scaffolded in Layer 0); the SWM `radon-mcp` server (not selected);
@@ -142,6 +143,14 @@ so only the needed guide is pulled into context.
 `api-design`, `nodejs-backend` (Fastify‑first, Express alt), `database-orm` (Prisma‑first, Drizzle alt),
 `backend-auth-security`, `backend-testing`.
 
+**Motion / UX judgment:**
+`motion-design-principles` — decides **when/why** to animate vs. when to hold back (the taste layer),
+complementing `mobile-animations` (which is **how**). Encodes: animate only to communicate meaning
+(state change, continuity, gesture feedback, purposeful delight); restrain on high‑frequency actions,
+dense scrolling, input‑blocking, low‑end/battery, and when Reduce Motion is on; hard rules —
+Reanimated `useReducedMotion()` fallback, 200–350ms durations, springs, cap concurrent heavy effects,
+keep work on the UI thread; ships a decision checklist the agent runs before adding any animation.
+
 **Shared / cross‑cutting:**
 `shared-contracts` (zod schemas + types shared mobile↔api in `packages/shared` — single source of truth),
 `typescript-strict`, `git-workflow`.
@@ -195,16 +204,39 @@ Fresh clone (no design in docs/specs/)
 | E2E | before release | Maestro (mobile), Supertest full‑flow (api) |
 
 ## 10. Animation stack (Reanimated v4)
-The `expo-router-nativewind` foundation and `mobile-animations` skill standardize:
-- Libraries: `react-native-reanimated@4` + `react-native-gesture-handler` + `react-native-worklets`;
-  `@shopify/flash-list` (smooth lists) + `expo-image` (smooth images); optional `moti`,
-  `@shopify/react-native-skia`.
-- **Gotchas baked in:**
-  - Reanimated 4 **requires the New Architecture (Fabric)** → `newArchEnabled: true` in `app.json`.
-  - Worklets moved to a **separate `react-native-worklets` package** in v4 (differs from v3 setup).
-  - Patterns: `useAnimatedStyle`, `withSpring/withTiming`, layout animations, Gesture Handler
-    integration, targeting 120fps.
-- `mobile-animations` points to the vendored SWM `react-native-best-practices` skill as the deep source.
+
+### 10.1 Libraries
+- Core: `react-native-reanimated@4` + `react-native-gesture-handler` + `react-native-worklets`
+- Lists/images: `@shopify/flash-list`, `expo-image`
+- Effects: `@shopify/react-native-skia` (GPU canvas — shaders, particles, morph/blur)
+- Prebuilt motion: `react-native-reanimated-carousel` (3D stack/tinder/parallax); optional `moti`
+- **3D depth = perspective transforms + Skia only.** No 3D engine
+  (`@react-three/fiber`/`filament`) in v1; a project that truly needs 3D scenes adds it in Phase 0.
+
+### 10.2 Gotchas baked into the foundation
+- Reanimated 4 **requires the New Architecture (Fabric)** → `newArchEnabled: true` in `app.json`.
+- Worklets moved to a **separate `react-native-worklets` package** in v4 (differs from v3 setup).
+- Reduce Motion: honor `useReducedMotion()` — degrade to fade/instant.
+
+### 10.3 `mobile-animations` = recipe/pattern library
+Each recipe ships a canonical snippet + a perf caveat, and defers the *whether* to
+`motion-design-principles`:
+- **Scroll‑driven 3D cards** — `useAnimatedScrollHandler` → `interpolate` scroll offset →
+  `transform: [{perspective},{rotateX/Y},{scale},{translateY}]` per item.
+- **Swipe‑to‑island morph** — Pan/Fling gesture + shared value + Reanimated layout transition
+  (`LinearTransition`/`entering`/`exiting`) to morph a list item into a floating in‑app "island" pill;
+  Skia for fluid/blur morphs.
+- **Gesture interactions** — pan/pinch/fling patterns integrated with Reanimated.
+- **Carousel** — `react-native-reanimated-carousel` 3D modes.
+- **Skia effects** — particles/shaders/blur for premium moments.
+- Deep source: vendored SWM `react-native-best-practices`.
+
+### 10.4 Dynamic Island — two tiers
+- **Core (v1):** *in‑app simulated island* via the swipe‑to‑island recipe above — pure
+  Reanimated/Skia, cross‑platform, no native code.
+- **Optional capability (documented, not core):** *real Live Activities* (iOS 16.1+, ActivityKit)
+  via `@bacons/apple-targets` (SwiftUI widget, EAS dev build, iOS‑only). Documented in
+  `docs/EXTERNAL_SKILLS.md`/foundation notes for projects that need a system‑level island.
 
 ## 11. Model strategy (native Claude Code)
 - Phase 0 / brainstorm and `code-reviewer`: **Opus** (deep reasoning) via subagent `model:` frontmatter.
