@@ -1,0 +1,21 @@
+# Builds the API's Docker image and deploys it. The deploy step is
+# intentionally left as a provider-agnostic placeholder below — plug in your
+# host's CLI/action (Fly.io, Render, Railway, AWS ECS, etc.) once one is
+# chosen; see docs/CI_CD.md.
+name: API Deploy
+on:
+  push: { branches: [main] }
+  workflow_dispatch:
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build API image
+        run: docker build -t api:${{ github.sha }} apps/api
+      # TODO: add your host's deploy step
+      # Examples:
+      #   - Fly.io:  flyctl deploy --config apps/api/fly.toml
+      #   - Render:  trigger the Render deploy hook or use the Render GitHub Action
+      #   - Railway: railway up --service api
+      #   - AWS ECS: push the image to ECR, then update the task definition/service

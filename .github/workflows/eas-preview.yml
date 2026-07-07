@@ -1,0 +1,30 @@
+# EAS preview build for the mobile app.
+#
+# Required secret: EXPO_TOKEN (an Expo access token — create one at
+# https://expo.dev/accounts/[account]/settings/access-tokens and add it under
+# this repo's Settings -> Secrets and variables -> Actions).
+# Without EXPO_TOKEN set, this workflow still runs but skips the build step.
+name: EAS Preview
+on:
+  push: { branches: [develop] }
+  workflow_dispatch:
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Build preview (requires EXPO_TOKEN secret)
+        if: env.EXPO_TOKEN != ''
+        working-directory: apps/mobile
+        run: eas build --profile preview --platform all --non-interactive
