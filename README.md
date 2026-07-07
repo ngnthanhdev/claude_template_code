@@ -29,7 +29,7 @@ triggers Phase 0 automatically the moment you open the repo in Claude Code.
 
 ## Requirements
 
-- [Claude Code](https://docs.claude.com/claude-code) (CLI)
+- [Claude Code](https://docs.claude.com/claude-code) — CLI, desktop app, web (claude.ai/code), or IDE extension. This is the engine that runs the template's workflow (skills, subagents, slash commands, hooks); it's a build/assist dependency, not a runtime one — the Expo app and NestJS API you produce run without it.
 - Node.js ≥ 20
 - pnpm (`npm install -g pnpm@9` if you don't have it)
 - git
