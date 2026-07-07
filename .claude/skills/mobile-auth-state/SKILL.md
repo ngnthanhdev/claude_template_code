@@ -57,7 +57,7 @@ export const secureTokens = {
 - `expo-secure-store` values must be strings — serialize/deserialize
   anything structured (e.g. `JSON.stringify`) rather than storing objects
   directly.
-- Never log a token, put it in a Sentry/analytics breadcrumb, or pass it
+- Never log a token, put it in an analytics/logging breadcrumb, or pass it
   through a navigation param.
 
 ## Persisted session store (Zustand)

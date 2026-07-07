@@ -1,6 +1,6 @@
 ---
 name: brainstorming
-description: Use before any new feature/major change — clarify → 2-3 approaches → design doc. Triggers on a fresh clone with empty docs/specs/ (Phase 0 HARD GATE), on /phase-0, on /refine, or any time a user asks for new product behavior not already covered by an approved spec in docs/specs/.
+description: Use when starting any new feature or major change — clarify → 2-3 approaches → design doc. Triggers on a fresh clone with empty docs/specs/ (Phase 0 HARD GATE), on /phase-0, on /refine, or any time a user asks for new product behavior not already covered by an approved spec in docs/specs/.
 ---
 
 # Brainstorming

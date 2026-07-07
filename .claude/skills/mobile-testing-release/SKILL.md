@@ -26,7 +26,7 @@ pnpm --filter mobile add -D jest jest-expo @testing-library/react-native @testin
 module.exports = {
   preset: "jest-expo",
   transformIgnorePatterns: [
-    "node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg)/)",
+    "node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|native-base|react-native-svg)/)",
   ],
   setupFilesAfterEnv: ["@testing-library/jest-native/extend-expect"],
 };
@@ -145,8 +145,6 @@ Before triggering a `production` EAS build/submit (see
       — see `expo-eas-pipeline`'s EAS env section.
 - [ ] Push notification / deep link entitlements (if used) are configured
       for the production bundle identifier, not just development.
-- [ ] Crash/error reporting (e.g. Sentry) is wired and pointed at the
-      production DSN, so a bad release is visible immediately.
 
 Don't skip a checklist item because "it worked in preview" — preview and
 production EAS profiles can differ in bundle identifier, entitlements, and

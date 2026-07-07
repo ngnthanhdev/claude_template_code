@@ -137,7 +137,7 @@ error rather than waiting for the round trip:
 // src/api/hooks/use-toggle-like.ts
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/api/client";
-import { postSchema } from "@shared/contracts/post";
+import { postSchema, type Post } from "@shared/contracts/post";
 
 export function useToggleLike(postId: string) {
   const queryClient = useQueryClient();
@@ -147,9 +147,10 @@ export function useToggleLike(postId: string) {
 
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: ["post", postId] });
-      const previous = queryClient.getQueryData(["post", postId]);
+      const previous = queryClient.getQueryData<Post>(["post", postId]);
 
-      queryClient.setQueryData(["post", postId], (old: any) =>
+      // Typed via the @shared Post contract — no `any` (typescript-strict).
+      queryClient.setQueryData<Post>(["post", postId], (old) =>
         old ? { ...old, liked: !old.liked, likeCount: old.likeCount + (old.liked ? -1 : 1) } : old,
       );
 

@@ -28,7 +28,7 @@ import { useAuthStore } from "@/auth/auth-store";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
-class ApiError extends Error {
+export class ApiError extends Error {
   constructor(public status: number, message: string) {
     super(message);
   }
@@ -99,6 +99,7 @@ export const apiClient = {
 ```tsx
 // src/api/query-client.ts
 import { QueryClient } from "@tanstack/react-query";
+import { ApiError } from "./client";
 
 export const queryClient = new QueryClient({
   defaultOptions: {

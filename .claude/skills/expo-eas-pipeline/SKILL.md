@@ -122,11 +122,12 @@ variable store, scoped per environment:
 
 ```bash
 eas env:create --scope project --environment production --name EXPO_PUBLIC_API_URL --value "https://api.example.com" --visibility plaintext
-eas env:create --scope project --environment production --name SENTRY_DSN --value "..." --visibility sensitive
+eas env:create --scope project --environment production --name API_SIGNING_KEY --value "..." --visibility sensitive
 ```
 
-- `--visibility sensitive` for anything secret-like (API keys, DSNs);
-  `plaintext` only for genuinely non-secret config (a public API base URL).
+- `--visibility sensitive` for anything secret-like (API keys, signing
+  keys); `plaintext` only for genuinely non-secret config (a public API
+  base URL).
 - Set the same variable name across `development`/`preview`/`production`
   environments with different values (e.g. `EXPO_PUBLIC_API_URL` pointing
   at localhost/staging/production respectively) — the build profile
