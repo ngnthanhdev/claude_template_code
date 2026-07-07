@@ -1,6 +1,5 @@
 ---
 description: Fan out every independent task in the current layer to its own worktree-isolated task-implementer, merge the results, then run code-reviewer on each diff.
-allowed-tools: Bash, Read, Grep, Glob
 ---
 
 Read the current `tasks/layer-N-todo.md` (per `CLAUDE.md`'s "Current Layer"
