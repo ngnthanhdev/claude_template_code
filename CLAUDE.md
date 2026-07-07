@@ -27,7 +27,7 @@ the gate and offer `/phase-0` instead.
 - Node.js ≥ 20
 - pnpm (workspace package manager — see `package.json#packageManager`)
 - git
-- Optional: [`graphify`](https://github.com/) + [`uv`](https://docs.astral.sh/uv/)
+- Optional: [`graphify`](https://github.com/Graphify-Labs/graphify) + [`uv`](https://docs.astral.sh/uv/)
   for the `/graph` command (codebase dependency graphing)
 
 ## Guides (`@`-imports)

@@ -7,7 +7,7 @@ pinned commit, with its license preserved — not installed as a live
 dependency. This keeps the skill set reproducible (no surprise upstream
 changes between sessions) and keeps attribution intact.
 
-Only 4 external skills are vendored. Everything else in `.claude/skills/` is
+5 external skills are vendored. Everything else in `.claude/skills/` is
 authored for this template.
 
 ## Vendored skills
@@ -18,6 +18,7 @@ authored for this template.
 | `react-native-guidelines` | [vercel-labs/agent-skills](https://github.com/vercel-labs/agent-skills) | `f8a72b9603728bb92a217a879b7e62e43ad76c81` | MIT (declared in README "License" section + the skill's own `SKILL.md` frontmatter; no top-level `LICENSE` file upstream — see the vendored `LICENSE`) | `tmp=$(mktemp -d) && git clone --depth 1 https://github.com/vercel-labs/agent-skills "$tmp/vercel" && rm -rf .claude/skills/react-native-guidelines && cp -R "$tmp/vercel/skills/react-native-skills" .claude/skills/react-native-guidelines && ( cd "$tmp/vercel" && git rev-parse HEAD ) > .claude/skills/react-native-guidelines/.upstream-commit && rm -rf "$tmp"` |
 | `ui-ux-pro-max` | [nextlevelbuilder/ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) | `12b486b22e67f5d887962ef8351c1ac863bfaeb9` | MIT (top-level `LICENSE` file, copied verbatim) | `tmp=$(mktemp -d) && git clone --depth 1 https://github.com/nextlevelbuilder/ui-ux-pro-max-skill "$tmp/uiux" && rm -rf .claude/skills/ui-ux-pro-max && cp -R "$tmp/uiux/.claude/skills/ui-ux-pro-max" .claude/skills/ui-ux-pro-max && ( cd "$tmp/uiux" && git rev-parse HEAD ) > .claude/skills/ui-ux-pro-max/.upstream-commit && rm -rf "$tmp"` |
 | `ponytail` | [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail) | `1b2760d384c44e573a9d8c7a729fac616e5c3a76` | MIT (top-level `LICENSE` file, copied verbatim) | `tmp=$(mktemp -d) && git clone --depth 1 https://github.com/DietrichGebert/ponytail "$tmp/ponytail" && rm -rf .claude/skills/ponytail && cp -R "$tmp/ponytail/skills/ponytail" .claude/skills/ponytail && ( cd "$tmp/ponytail" && git rev-parse HEAD ) > .claude/skills/ponytail/.upstream-commit && rm -rf "$tmp"` |
+| `graphify` | [Graphify-Labs/graphify](https://github.com/Graphify-Labs/graphify) | `53efaf89b68190d367feb73f9ef5dba15899377c` | MIT (top-level `LICENSE` file, copied verbatim) | `tmp=$(mktemp -d) && git clone --depth 1 https://github.com/Graphify-Labs/graphify "$tmp/graphify" && rm -rf .claude/skills/graphify && mkdir -p .claude/skills/graphify && cp "$tmp/graphify/graphify/skill.md" .claude/skills/graphify/SKILL.md && cp -R "$tmp/graphify/graphify/skills/claude/references" .claude/skills/graphify/references && cp "$tmp/graphify/LICENSE" .claude/skills/graphify/LICENSE && ( cd "$tmp/graphify" && git rev-parse HEAD ) > .claude/skills/graphify/.upstream-commit && rm -rf "$tmp"` |
 
 Each vendored folder contains, in addition to the skill content:
 
@@ -29,9 +30,14 @@ Each vendored folder contains, in addition to the skill content:
 - `.upstream-commit` — the exact commit the vendored copy was cut from. Diff
   against a fresh clone at this commit to see if upstream has drifted.
 
-No skill was left install-only — all 4 requested skills carried a
-redistribution-permissive license (MIT in every case), so all 4 were vendored
-in full rather than recorded as an `npx`/plugin-install pointer.
+No skill was left install-only — all 5 requested skills carried a
+redistribution-permissive license (MIT in every case), so all 5 were vendored
+in full rather than recorded as an `npx`/plugin-install pointer. `graphify` is
+the one exception to "no live dependency": the skill content itself is fully
+vendored, but the skill is only *useful* once its companion CLI is installed
+separately (see its per-skill note below) — it's a documentation/knowledge
+skill wrapping an external runtime tool, not a self-contained skill like the
+other four.
 
 ### Per-skill notes
 
@@ -71,6 +77,18 @@ in full rather than recorded as an `npx`/plugin-install pointer.
   self-contained Claude Code skill (valid `name:`/`description:`/`license:`
   frontmatter, no external references). The plugin/hook/command scaffolding
   for other agents was left upstream, not vendored.
+- **`graphify`** — upstream repo: [Graphify-Labs/graphify](https://github.com/Graphify-Labs/graphify).
+  `SKILL.md` is copied from upstream `graphify/skill.md`; the `references/`
+  directory is copied from upstream `graphify/skills/claude/references/`
+  (8 files: extraction spec, query, update, exports, hooks, add-watch,
+  transcribe, github-and-merge); `LICENSE` is the upstream top-level file,
+  copied verbatim. Unlike the other four vendored skills, `graphify` is not
+  fully self-contained: the skill content only documents how to *use* the
+  tool, and running it for real needs the `graphify` CLI on `PATH`, installed
+  separately with `uv tool install graphifyy` (PyPI package name is
+  `graphifyy`, double `y`; the command it installs is `graphify`). See
+  `docs/GRAPH.md` for the full install/usage flow and `/graphify .` for the
+  vendored skill's invocation.
 
 ## `ponytail` vs the built-in `/simplify` skill — when to use which
 

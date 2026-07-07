@@ -34,7 +34,7 @@ triggers Phase 0 automatically the moment you open the repo in Claude Code.
 - pnpm (`npm install -g pnpm@9` if you don't have it)
 - git
 - For mobile development: Watchman, Xcode (iOS) and/or Android Studio (Android)
-- Optional: [`graphify`](https://github.com/) + [`uv`](https://docs.astral.sh/uv/) for the `/graph`
+- Optional: [`graphify`](https://github.com/Graphify-Labs/graphify) + [`uv`](https://docs.astral.sh/uv/) for the `/graph`
   command (codebase dependency graphing)
 
 ## Quick start
