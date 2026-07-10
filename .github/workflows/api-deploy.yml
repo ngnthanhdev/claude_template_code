@@ -10,7 +10,7 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build API image
         run: docker build -t api:${{ github.sha }} apps/api
       # TODO: add your host's deploy step
