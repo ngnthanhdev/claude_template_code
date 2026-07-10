@@ -75,6 +75,7 @@ claude_template_code/
 ├── docs/
 │   ├── BRIEF.md  PRD.md  ARCHITECTURE.md  SCOPE_BREAKDOWN.md
 │   ├── WORKFLOW.md  CI_CD.md  CONTINUOUS_LEARNING.md  GRAPH.md
+│   ├── SECURITY.md               # ASVS/MASVS standards, tool matrix, workflow
 │   ├── EXTERNAL_SKILLS.md        # provenance/version/license of vendored skills
 │   ├── specs/                    # design docs land here (empty until Phase 0 runs)
 │   └── phases/phase-0.md
@@ -153,11 +154,14 @@ advancing to the next layer before its tests pass; (3) no hard‑coded secrets �
 | `api-design` | REST resource design, pagination, error envelopes, versioning |
 | `nestjs-backend` | Modules/DI/guards/pipes, Fastify adapter, `nestjs-zod` validation |
 | `database-orm` | Prisma schema, migrations, `PrismaModule`/`PrismaService`, transactions |
-| `backend-auth-security` | Guards + Passport, RBAC, CORS/CSRF, helmet, OWASP top‑10 |
+| `backend-auth-security` | Guards + Passport, RBAC, CORS/CSRF, helmet, OWASP top‑10, BOLA/IDOR + mass‑assignment (ASVS) |
 | `backend-testing` | Jest unit + Supertest integration against the Nest app |
 | `shared-contracts` | `packages/shared` zod schemas as the mobile↔api single source of truth |
 | `typescript-strict` | No `any`, narrowing, discriminated unions, `satisfies` |
 | `git-workflow` | Conventional commits, branch naming, 1 commit = 1 task |
+| `security-threat-model` | STRIDE + trust boundaries before a large feature (see `docs/SECURITY.md`) |
+| `security-review` | Audit a diff/PR for high‑confidence security findings (ASVS/MASVS) |
+| `expo-security` | Mobile hardening to OWASP MASVS: token storage, deep links, WebView, build config |
 
 ### Vendored (external, license‑preserved)
 

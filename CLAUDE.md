@@ -37,6 +37,19 @@ the gate and offer `/phase-0` instead.
 - @docs/CI_CD.md — the four GitHub Actions workflows, required secrets, gate rules
 - @docs/CONTINUOUS_LEARNING.md — `.learnings/` methodology and the `/learn` command
 
+## Skills — security
+
+Full skill table (27 total: 24 existing + 3 new security skills below): see
+"Skills" in `README.md`. Security-specific skills, standards in
+`docs/SECURITY.md`:
+
+| Skill | Purpose |
+|---|---|
+| `security-threat-model` | STRIDE + trust boundaries — run before a large feature is built |
+| `backend-auth-security` | Auth guards, RBAC, BOLA/IDOR + mass‑assignment (OWASP ASVS) |
+| `expo-security` | Mobile hardening to OWASP MASVS — token storage, deep links, build config |
+| `security-review` | Audit a diff/PR for high‑confidence security findings before merge |
+
 ## Stack
 
 Locked defaults for this template (do not relitigate these in Phase 0 unless
@@ -71,6 +84,7 @@ claude_template_code/
 ├── docs/
 │   ├── BRIEF.md  PRD.md  ARCHITECTURE.md  SCOPE_BREAKDOWN.md
 │   ├── WORKFLOW.md  CI_CD.md  CONTINUOUS_LEARNING.md  GRAPH.md
+│   ├── SECURITY.md               # ASVS/MASVS standards, tool matrix, workflow
 │   ├── EXTERNAL_SKILLS.md
 │   ├── specs/                    # approved design docs land here
 │   └── phases/phase-0.md
