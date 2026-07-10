@@ -171,6 +171,7 @@ advancing to the next layer before its tests pass; (3) no hard‑coded secrets �
 | `react-native-guidelines` | vercel‑labs/agent‑skills | Perf guardrails: FlashList, memoization, expo‑image |
 | `ui-ux-pro-max` | nextlevelbuilder/ui-ux-pro-max-skill | Visual design intelligence (styles, palettes, typography) |
 | `ponytail` | DietrichGebert/ponytail | Code‑minimalism discipline (anti over‑engineering) |
+| `graphify` | Graphify-Labs/graphify | Codebase knowledge graph — powers `/graph` (needs the `graphifyy` CLI) |
 
 See `docs/EXTERNAL_SKILLS.md` for pinned commits, licenses, and re‑sync commands.
 
