@@ -189,13 +189,17 @@ implement it.
 
 ## CI/CD
 
-Four GitHub Actions workflows live in `.github/workflows/`:
+Five GitHub Actions workflows live in `.github/workflows/`:
 
 - `ci.yml` — on every PR/push: `pnpm turbo run lint typecheck test`
+- `security.yml` — on every PR/push: Gitleaks (secrets), Semgrep (SAST), `pnpm audit` (dependencies)
 - `eas-preview.yml` — builds an EAS preview profile from `develop` / manual dispatch
 - `eas-production.yml` — manual, gated EAS production build (+ optional submit)
 - `api-deploy.yml` — builds the API Docker image; the actual hosting deploy step is left as a
   provider‑agnostic placeholder for you to fill in
+
+`.github/dependabot.yml` runs alongside these: weekly `npm` updates across the workspace and
+`github-actions` updates for the workflows themselves.
 
 See `docs/CI_CD.md` for required secrets and gate rules.
 

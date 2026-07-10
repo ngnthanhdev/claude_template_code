@@ -34,7 +34,7 @@ the gate and offer `/phase-0` instead.
 
 - @docs/WORKFLOW.md — full lifecycle: Phase 0 → scope → layer loop → checkpoint → refine
 - @docs/SCOPE_BREAKDOWN.md — how layers and tasks are derived from the approved spec
-- @docs/CI_CD.md — the four GitHub Actions workflows, required secrets, gate rules
+- @docs/CI_CD.md — the five GitHub Actions workflows, required secrets, gate rules
 - @docs/CONTINUOUS_LEARNING.md — `.learnings/` methodology and the `/learn` command
 
 ## Skills — security

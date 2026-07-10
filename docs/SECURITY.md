@@ -41,10 +41,18 @@ verifiable standard.
    deep links, minimal persistence per `expo-security`.
 4. **`security-review` on the diff** — high-confidence findings before merge,
    complementing `code-reviewer`'s correctness/simplification pass.
-5. **Run scanners in CI** — Semgrep/CodeQL, Dependabot/Renovate, Gitleaks,
-   Trivy. All source/dependency/container-level, no running app or build
-   artifact required, so all four fit the "no heavy builds in CI" rule this
-   template otherwise enforces (`CLAUDE.md`'s Token discipline section).
+5. **Run scanners in CI** — `.github/workflows/security.yml` (Gitleaks
+   secret scan, Semgrep SAST against `p/typescript p/javascript
+   p/owasp-top-ten p/nodejsscan`, and `pnpm audit --audit-level=high` for
+   dependency vulnerabilities) plus `.github/dependabot.yml` (weekly `npm`
+   updates for the workspace root, `apps/mobile`, `apps/api`,
+   `packages/shared`, and weekly `github-actions` updates). All
+   source/dependency-level, no running app or build artifact required, so
+   this fits the "no heavy builds in CI" rule this template otherwise
+   enforces (`CLAUDE.md`'s Token discipline section). Each `security.yml`
+   step runs `continue-on-error` today since `apps/*`/`packages/shared` are
+   still empty skeletons — it becomes a real gate once they're scaffolded
+   and you choose to remove that.
 6. **Build production, then scan the artifact** — OWASP ZAP against a
    deployed/running API, MobSF against the built APK/IPA, at release time.
 

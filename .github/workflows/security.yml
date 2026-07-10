@@ -1,0 +1,61 @@
+# Security scanning: secrets, SAST, and dependency vulnerabilities.
+#
+# apps/mobile, apps/api, and packages/shared are still empty skeletons at
+# this point in the template (scaffolded in Layer 0 — see
+# docs/SCOPE_BREAKDOWN.md) — each job below runs against effectively nothing
+# today and becomes meaningful once real source and dependencies land.
+# continue-on-error is set on each step for that reason; drop it once these
+# scanners have real surface area to check and you want them to gate merges.
+#
+# ZAP (dynamic scan against a running API) and MobSF (built APK/IPA scan) are
+# deliberately not here — both need a live/built artifact, so they run
+# manually at release time instead. See docs/SECURITY.md.
+name: Security
+on:
+  pull_request:
+  push: { branches: [main, develop] }
+jobs:
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      # Secret scan — flags credential-shaped strings in the diff/history.
+      - name: Gitleaks (secret scan)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+  semgrep:
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+    steps:
+      - uses: actions/checkout@v4
+      # SAST — becomes meaningful once apps/api and apps/mobile have real
+      # TypeScript/JavaScript source for these rulesets to check.
+      - name: Semgrep (SAST)
+        run: >-
+          semgrep ci
+          --config p/typescript
+          --config p/javascript
+          --config p/owasp-top-ten
+          --config p/nodejsscan
+        continue-on-error: true
+
+  dependency-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      # Dependency audit — becomes meaningful once apps/mobile, apps/api, and
+      # packages/shared carry real dependencies; the lockfile has nothing to
+      # flag today.
+      - name: pnpm audit (dependency vulnerabilities)
+        run: pnpm audit --audit-level=high
+        continue-on-error: true

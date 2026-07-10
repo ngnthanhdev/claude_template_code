@@ -1,17 +1,28 @@
 # CI/CD
 
-Four GitHub Actions workflows live in `.github/workflows/`. `CLAUDE.md`
+Five GitHub Actions workflows live in `.github/workflows/`. `CLAUDE.md`
 `@`-imports this file so Claude always knows the gate rules before it commits
 anything meant to ship.
 
-## The four workflows
+## The five workflows
 
 | Workflow | Trigger | Purpose |
 |---|---|---|
 | `ci.yml` | every pull request; push to `main`/`develop` | Quality gate: `pnpm install --frozen-lockfile` then `pnpm turbo run lint typecheck test` across every app/package in the workspace. |
+| `security.yml` | every pull request; push to `main`/`develop` | Gitleaks (secret scan), Semgrep (SAST against `p/typescript p/javascript p/owasp-top-ten p/nodejsscan`), and `pnpm audit --audit-level=high` (dependency vulnerabilities). Each step runs `continue-on-error` today since `apps/*`/`packages/shared` are still empty skeletons; see `docs/SECURITY.md`. |
 | `eas-preview.yml` | push to `develop`; manual (`workflow_dispatch`) | Builds an internal-distribution EAS **preview** build of the mobile app (`eas build --profile preview --platform all --non-interactive`), for QA on real devices without going through the app stores. |
 | `eas-production.yml` | manual (`workflow_dispatch`) only | Builds the **production** EAS profile (and optionally `eas submit`s it) from the `production` GitHub environment, so it can require manual approval before running. Never fires on a normal push. |
 | `api-deploy.yml` | push to `main`; manual (`workflow_dispatch`) | Builds the API's Docker image (`docker build apps/api`). The actual deploy step is a **provider-agnostic placeholder** — see below. |
+
+`.github/dependabot.yml` runs alongside these workflows (not itself a
+workflow file): weekly `npm` updates for the workspace root,
+`apps/mobile`, `apps/api`, `packages/shared`, plus weekly `github-actions`
+updates for `.github/workflows/` itself. It also finds nothing to update in
+the app/package directories until they're scaffolded.
+
+**ZAP and MobSF remain manual, release-time steps**, not part of any of
+these five workflows — see `docs/SECURITY.md` for why (both need a
+running/built artifact `security.yml` doesn't produce).
 
 ## Required secret: `EXPO_TOKEN`
 
