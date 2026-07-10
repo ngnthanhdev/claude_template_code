@@ -255,11 +255,82 @@ config.getOrThrow<string>("JWT_SECRET"); // throws at the call site if somehow m
 fail loudly at the point of use rather than silently proceeding with
 `undefined`.
 
+## Broken Object-Level Authorization (BOLA/IDOR) & mass assignment
+
+Authentication proves *who* the caller is; it doesn't prove they're allowed
+to touch the specific record their request names. BOLA/IDOR — a caller
+supplying another user's/tenant's ID and the API happily operating on it —
+is the most common access-control failure in APIs shaped like this
+template's (resource-per-ID routes backed directly by Prisma). Guard against
+it at the **query**, not just the guard/decorator level: a route can pass
+`JwtAuthGuard` and `RolesGuard` and still be exploitable if the Prisma call
+underneath doesn't scope to the caller.
+
+### Mass assignment
+
+Never spread a client-supplied DTO straight into a Prisma write — anything
+the DTO's shape allows, the client can set, including fields that should
+only ever be server-derived (`ownerId`, `role`, `price`, `isVerified`).
+Assign owner/privileged fields explicitly from the authenticated user or a
+server-side default, never from the DTO:
+
+```ts
+// BAD — dto could carry an `ownerId` the client invented, or any other
+// field that happens to match the Prisma model's shape.
+await this.prisma.trip.create({ data: dto });
+
+// GOOD — only the fields the client should control come from dto; the
+// owning relation is set from the authenticated request, never the body.
+await this.prisma.trip.create({
+  data: { name: dto.name, ownerId: authenticatedUser.id },
+});
+```
+
+### Unscoped lookups
+
+A bare `findUnique({ where: { id } })` (or `findFirst`/`update`/`delete`
+keyed only on the record's own ID) trusts that the ID alone is enough to
+authorize the operation — it isn't. Scope every lookup of a
+user-or-tenant-owned resource to the authenticated user, either directly or
+through its parent relation:
+
+```ts
+// BAD — returns the activity regardless of who's asking; any authenticated
+// user who guesses/enumerates an activity ID from another trip gets it.
+await this.prisma.activity.findUnique({ where: { id } });
+
+// GOOD — the activity must belong to the given trip, and the caller must
+// be a member of that trip. No match on either condition returns null,
+// exactly like the record doesn't exist to this caller.
+await this.prisma.activity.findFirst({
+  where: {
+    id: activityId,
+    tripId,
+    trip: { members: { some: { userId: authenticatedUser.id } } },
+  },
+});
+```
+
+Treat a `null` result from a scoped lookup like this as a 404, not a 403 —
+returning 403 (rather than 404) for a resource that exists but isn't the
+caller's confirms the ID is valid to anyone probing it, leaking existence
+information the scoped query was meant to hide.
+
+This is the same discipline `security-review` checks for on every diff
+(its BOLA/IDOR and mass-assignment checklist items), and what
+`security-threat-model`'s elevation-of-privilege STRIDE category is looking
+for before the code is even written.
+
+**Verification standard:** map access-control findings here to
+**OWASP ASVS** (Application Security Verification Standard) chapter 4
+(Access Control) and chapter 5 (Validation, Sanitization, Encoding) — the
+backend counterpart to MASVS on the mobile side (`expo-security`).
+
 ## OWASP Top 10 — where this template stands
 
 | Category | Mitigation in this stack |
 |---|---|
-| Broken Access Control | Default-deny `JwtAuthGuard` + `@Public()` opt-out; `RolesGuard` for RBAC |
+| Broken Access Control | Default-deny `JwtAuthGuard` + `@Public()` opt-out; `RolesGuard` for RBAC; scoped Prisma lookups against BOLA/IDOR (see above) |
 | Cryptographic Failures | Secrets via `ConfigService`/env only; hash passwords with `argon2`/`bcrypt`, never store plaintext; TLS terminated at the load balancer/platform |
 | Injection | Prisma parameterizes every query (`database-orm`); every input validated by `nestjs-zod` before it reaches a service |
 | Insecure Design | Threat-model new features during `brainstorming`/`api-design`, before writing code |
