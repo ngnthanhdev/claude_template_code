@@ -1,5 +1,5 @@
 ---
-description: Fan out every independent task in the current layer to its own worktree-isolated task-implementer, merge the results, then run code-reviewer on each diff.
+description: Fan out every independent task in the current layer to its own worktree-isolated task-implementer, merge the results, then run code-reviewer and security-reviewer on each diff.
 ---
 
 Read the current `tasks/layer-N-todo.md` (per `CLAUDE.md`'s "Current Layer"
@@ -38,9 +38,14 @@ Once all of this round's tasks are merged, dispatch `code-reviewer` on the
 combined diff for the layer so far (or per-task diff if that's clearer for
 the user to act on). Report its findings ranked by severity.
 
+After `code-reviewer`, dispatch `security-reviewer` on the same diff — the
+security lens (BOLA/IDOR, mass assignment, validation, secrets) that
+`code-reviewer` doesn't specialize in. Surface its high-confidence findings
+before moving on to `/next-layer`.
+
 ## 4. Report
 
 Summarize: tasks completed this round, any merge conflicts surfaced and
-their resolution status, and code-reviewer's findings. Remind the user that
-`/next-layer` still requires the layer's tests to be green (via
-`test-writer`) before advancing.
+their resolution status, code-reviewer's findings, and security-reviewer's
+findings. Remind the user that `/next-layer` still requires the layer's
+tests to be green (via `test-writer`) before advancing.

@@ -133,6 +133,8 @@ advancing to the next layer before its tests pass; (3) no hard‑coded secrets �
 | `/learn` | Extract patterns/gotchas from the finished layer into `.learnings/` |
 | `/graph` | Run `graphify` over the monorepo and summarize `GRAPH_REPORT.md` |
 | `/refine` | Brainstorm a reported bug/feature, then append it to `tasks/layer-refinement-todo.md` |
+| `/security-review` | Run `security-review` over a diff/PR/path → high-confidence security findings |
+| `/threat-model` | Run `security-threat-model` on a named feature before implementation |
 
 ## Skills
 

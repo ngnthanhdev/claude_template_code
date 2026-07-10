@@ -47,6 +47,11 @@ Only after this approval does `docs/specs/` stop being empty, and only then
 does the gate in `CLAUDE.md` open. See `docs/phases/phase-0.md` for the
 detailed step-by-step instructions Claude follows during this phase.
 
+For a feature large enough to introduce a new trust boundary, data flow, or
+privilege level, run **`/threat-model`** during this Phase 0 pass (or during
+`/refine` for a feature-sized change later) — before the design doc is
+finalized, not after. See `docs/SECURITY.md` for the full workflow.
+
 ## Scope breakdown
 
 Once a design is approved, `/scope-breakdown` dispatches the `scope-planner`
@@ -76,7 +81,11 @@ Each layer is worked through the same four-step loop:
 3. **`code-reviewer`** (model: Opus) reviews each merged diff for correctness
    bugs and simplification/reuse opportunities, and reports findings ranked by
    severity.
-4. **`test-writer`** (model: Sonnet) adds the integration/e2e coverage that a
+4. **`security-reviewer`** (model: Opus) runs after `code-reviewer` on the
+   same diff — the security lens (BOLA/IDOR, mass assignment, DTO
+   validation, secrets, rate limiting) rather than correctness/simplification.
+   Reports only high-confidence findings, per `docs/SECURITY.md`.
+5. **`test-writer`** (model: Sonnet) adds the integration/e2e coverage that a
    single-task unit test can't reach — Jest+Supertest flows for the API,
    React Testing Library flows for mobile, Maestro flows once a release is
    near.
@@ -123,12 +132,14 @@ up by `/run-layer`.
 | Pick work | `/pick-task` | — | — |
 | Implement | `/run-layer` | `task-implementer` (fan-out) | Sonnet |
 | Review | `/run-layer` (post-merge step) | `code-reviewer` | Opus |
+| Security review | `/run-layer` (post-code-reviewer step) / `/security-review` | `security-reviewer` | Opus |
 | Layer tests | `/next-layer` (pre-gate step) | `test-writer` | Sonnet |
 | Advance | `/next-layer` | — | — |
 | Checkpoint | `/checkpoint` | — | — |
 | Learn | `/learn` | — | — |
 | Graph | `/graph` | — | — |
 | Bug/feature | `/refine` | — (brainstorm, main thread) | Opus |
+| Threat model | `/threat-model` | — (`security-threat-model` skill, main thread) | Opus |
 | Debug | — (ad hoc) | `debugger` | Opus |
 
 ## The three discipline gates

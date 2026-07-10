@@ -132,6 +132,8 @@ claude_template_code/
 | `/learn` | Extract patterns/gotchas from the finished layer into `.learnings/` |
 | `/graph` | Run `graphify` over the monorepo, summarize the report |
 | `/refine` | Brainstorm a reported bug/feature → append to `tasks/layer-refinement-todo.md` |
+| `/security-review` | Run `security-review` over a diff/PR/path → high-confidence security findings |
+| `/threat-model` | Run `security-threat-model` on a named feature before implementation |
 
 ## Subagents
 
@@ -140,6 +142,7 @@ claude_template_code/
 | `scope-planner` | Read the approved spec, dependency-analyze it, emit `tasks/layer-*.md` |
 | `task-implementer` | Implement exactly one task in an isolated git worktree, TDD, return a summary |
 | `code-reviewer` | Review a diff for correctness bugs + simplification opportunities |
+| `security-reviewer` | Audit a diff for high-confidence security findings (BOLA/IDOR, mass assignment, secrets) |
 | `test-writer` | Write integration/e2e tests at the end of a layer |
 | `debugger` | Systematic reproduce → isolate → fix → regression-test loop on a bug |
 
