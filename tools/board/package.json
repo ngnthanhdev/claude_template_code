@@ -1,0 +1,11 @@
+{
+  "name": "@tools/board",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "tsx --test lib/*.test.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0"
+  }
+}
