@@ -91,6 +91,72 @@
   .conn-live { color: var(--done); }
   .conn-down { color: var(--blocked); }
 
+  /* Auto-run runner indicator + controls */
+  .runner-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+  }
+  .runner-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 3px 10px;
+    border-radius: 999px;
+    text-transform: uppercase;
+  }
+  .runner-pill::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  .runner-off { background: var(--chip-bg); color: var(--muted); }
+  .runner-armed { background: var(--blocked-bg); color: var(--blocked); }
+  .runner-paused { background: var(--chip-bg); color: var(--ready); }
+  .runner-toggle {
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--card-border);
+    background: var(--card-bg);
+    color: var(--fg);
+    cursor: pointer;
+  }
+  .runner-toggle:disabled { opacity: 0.5; cursor: not-allowed; }
+  .runner-warning {
+    margin: 10px 0 0;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: var(--blocked-bg);
+    color: var(--blocked);
+    border: 1px solid var(--blocked);
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .runner-warning.hidden { display: none; }
+  .run-progress {
+    margin-top: 6px;
+    font-size: 11px;
+    color: var(--muted);
+    border-top: 1px dashed var(--card-border);
+    padding-top: 6px;
+  }
+  .run-progress .branch {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color: var(--ready);
+    word-break: break-all;
+  }
+  .run-progress .log { display: block; margin-top: 2px; font-style: italic; }
+
   main#board {
     padding: 16px 20px 40px;
   }
@@ -227,7 +293,17 @@
       <code>Status</code>/<code>Assignee</code>; task content stays owned by
       Claude. Changes made by Claude to the task files appear here live.
     </p>
-    <span class="conn" id="conn">connecting…</span>
+    <div class="runner-bar">
+      <span class="conn" id="conn">connecting…</span>
+      <span class="runner-pill runner-off" id="runner-pill">Auto-run: OFF</span>
+      <button class="runner-toggle" id="runner-toggle" hidden>Arm auto-run</button>
+    </div>
+    <p class="runner-warning hidden" id="runner-warning">
+      ⚠️ Auto-run is ARMED. Ready + AI tasks are being implemented autonomously
+      by headless <code>claude</code> runs in isolated worktrees. This spends
+      real API budget and changes code unattended — nothing is pushed or merged,
+      but review every <code>auto/&lt;id&gt;</code> branch before merging.
+    </p>
   </header>
   <main id="board"><p class="empty">Loading tasks…</p></main>
 
@@ -245,6 +321,56 @@
 
     const state = { tasks: [] };
     let sortables = [];
+
+    // Autonomous-runner UI state.
+    let runnerState = { available: false, armed: false, running: [] };
+    const runProgress = new Map(); // id -> { branch, worktree, log }
+
+    function renderRunner() {
+      const pill = document.getElementById("runner-pill");
+      const toggle = document.getElementById("runner-toggle");
+      const warning = document.getElementById("runner-warning");
+
+      if (!runnerState.available) {
+        pill.className = "runner-pill runner-off";
+        pill.textContent = "Auto-run: OFF";
+        toggle.hidden = true;
+        warning.classList.add("hidden");
+        return;
+      }
+
+      toggle.hidden = false;
+      if (runnerState.armed) {
+        pill.className = "runner-pill runner-armed";
+        pill.textContent = "Auto-run: ARMED";
+        toggle.textContent = "Disarm auto-run";
+        warning.classList.remove("hidden");
+      } else {
+        pill.className = "runner-pill runner-paused";
+        pill.textContent = "Auto-run: PAUSED";
+        toggle.textContent = "Arm auto-run";
+        warning.classList.add("hidden");
+      }
+    }
+
+    function toggleRunner() {
+      const toggle = document.getElementById("runner-toggle");
+      toggle.disabled = true;
+      fetch("/api/runner", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ enabled: !runnerState.armed }),
+      })
+        .then((res) => res.json())
+        .then((st) => {
+          runnerState = st;
+          renderRunner();
+        })
+        .catch((err) => console.error("runner toggle failed", err))
+        .finally(() => {
+          toggle.disabled = false;
+        });
+    }
 
     function layerLabel(layer) {
       if (/^\d+$/.test(layer)) return `Layer ${layer}`;
@@ -301,6 +427,27 @@
           skillsEl.appendChild(chip);
         }
         card.appendChild(skillsEl);
+      }
+
+      // Live autonomous-run progress on in-progress cards: the isolated
+      // auto/<id> branch/worktree and the latest streamed progress line.
+      const prog = runProgress.get(task.id);
+      if (prog && task.status === "in-progress") {
+        const box = document.createElement("div");
+        box.className = "run-progress";
+        if (prog.branch) {
+          const b = document.createElement("span");
+          b.className = "branch";
+          b.textContent = prog.branch;
+          box.appendChild(b);
+        }
+        if (prog.log) {
+          const l = document.createElement("span");
+          l.className = "log";
+          l.textContent = prog.log;
+          box.appendChild(l);
+        }
+        card.appendChild(box);
       }
 
       return card;
@@ -414,11 +561,35 @@
           if (msg.type === "tasks" && Array.isArray(msg.tasks)) {
             state.tasks = msg.tasks;
             render();
+          } else if (msg.type === "runner" && msg.state) {
+            runnerState = msg.state;
+            renderRunner();
+          } else if (msg.type === "runner-event" && msg.event) {
+            applyRunnerEvent(msg.event);
           }
         } catch (err) {
           console.error("bad WS message", err);
         }
       });
+    }
+
+    function applyRunnerEvent(evt) {
+      if (evt.kind === "run-start") {
+        runProgress.set(evt.id, {
+          branch: evt.branch,
+          worktree: evt.worktree,
+          log: "starting…",
+        });
+        render();
+      } else if (evt.kind === "run-log") {
+        const p = runProgress.get(evt.id) || {};
+        p.log = evt.message;
+        runProgress.set(evt.id, p);
+        render();
+      } else if (evt.kind === "run-end") {
+        runProgress.delete(evt.id);
+        render();
+      }
     }
 
     function loadMeta() {
@@ -433,7 +604,21 @@
         .catch((err) => console.error("failed to load /api/meta", err));
     }
 
+    function loadRunner() {
+      fetch("/api/runner")
+        .then((res) => res.json())
+        .then((st) => {
+          runnerState = st;
+          renderRunner();
+        })
+        .catch((err) => console.error("failed to load /api/runner", err));
+    }
+
+    document.getElementById("runner-toggle").addEventListener("click", toggleRunner);
+
     loadMeta();
+    loadRunner();
+    renderRunner();
     connectWs();
   </script>
 </body>
