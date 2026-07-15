@@ -16,19 +16,21 @@ task that a `task-implementer` can't act on.
 ---
 
 <!--
-Task block format used by /refine when appending below. One block per task:
+Task block format used by /refine when appending below. One block per task —
+a level-3 heading with a stable T-xxxxxx id, then a metadata list:
 
-### [ ] Task: <short imperative title>
+### T-a3f9c1 — <short imperative title>
+- **Status:** todo        <!-- todo | ready | in-progress | blocked | review | done -->
+- **Assignee:** ai        <!-- ai | human, per what /refine decided -->
+- **Files:** <the concrete paths this task is expected to touch>
+- **Acceptance:** <checkable definition of done>
+- **Skills:** <relevant .claude/skills/* to load, if any>
+- **Depends:** <other T-xxxxxx in this file, omit if none>
 
-**Files:** <the concrete paths this task is expected to touch>
+<optional free-form notes below, e.g. bug-vs-feature context from the brainstorm>
 
-**Skills:** <relevant .claude/skills/* to load, if any>
-
-**Acceptance criteria:**
-- <checkable condition>
-- <checkable condition>
-
-**Depends on:** <other task in this file, or "none">
+A new task always starts at `Status: todo`, with `Assignee: ai` unless the
+brainstorm surfaced a decision only a human can make (`Assignee: human`).
 
 (Delete this comment block's content when the first real task is added; keep
 the format itself as the template for every task appended after it.)

@@ -97,14 +97,51 @@ function inferLayerFallback(lines: string[], headingIdx: number): string {
   return "done";
 }
 
+/**
+ * Marks lines that fall inside a fenced code block (``` ... ```) or a
+ * multi-line HTML comment (<!-- ... -->) as "not live" so schema examples
+ * documented inside a tasks/*.md file (e.g. a fenced sample task block)
+ * aren't mistaken for a real task heading.
+ */
+function computeLiveMask(lines: string[]): boolean[] {
+  const mask: boolean[] = new Array(lines.length).fill(true);
+  let inFence = false;
+  let inComment = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = stripCr(lines[i]);
+    if (inFence) {
+      mask[i] = false;
+      if (/^\s*```/.test(line)) inFence = false;
+      continue;
+    }
+    if (inComment) {
+      mask[i] = false;
+      if (line.includes("-->")) inComment = false;
+      continue;
+    }
+    if (/^\s*```/.test(line)) {
+      mask[i] = false;
+      inFence = true;
+      continue;
+    }
+    if (line.includes("<!--") && !line.includes("-->")) {
+      mask[i] = false;
+      inComment = true;
+      continue;
+    }
+  }
+  return mask;
+}
+
 export function parseTaskFile(filePath: string): Task[] {
   const raw = readFileSync(filePath, "utf8");
   const lines = raw.split("\n");
   const filenameLayer = inferLayerFromFilename(filePath);
+  const liveMask = computeLiveMask(lines);
 
   const headingIdxs: number[] = [];
   for (let i = 0; i < lines.length; i++) {
-    if (HEADING_RE.test(stripCr(lines[i]))) headingIdxs.push(i);
+    if (liveMask[i] && HEADING_RE.test(stripCr(lines[i]))) headingIdxs.push(i);
   }
 
   const tasks: Task[] = [];
@@ -217,9 +254,11 @@ export function patchTask(
 ): void {
   const raw = readFileSync(filePath, "utf8");
   const lines = raw.split("\n");
+  const liveMask = computeLiveMask(lines);
 
   let headingIdx = -1;
   for (let i = 0; i < lines.length; i++) {
+    if (!liveMask[i]) continue;
     const m = stripCr(lines[i]).match(HEADING_RE);
     if (m && m[1] === id) {
       headingIdx = i;
@@ -232,7 +271,7 @@ export function patchTask(
 
   let blockEnd = lines.length;
   for (let i = headingIdx + 1; i < lines.length; i++) {
-    if (HEADING_RE.test(stripCr(lines[i]))) {
+    if (liveMask[i] && HEADING_RE.test(stripCr(lines[i]))) {
       blockEnd = i;
       break;
     }

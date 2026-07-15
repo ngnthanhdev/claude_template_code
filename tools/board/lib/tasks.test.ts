@@ -198,6 +198,46 @@ test("patchTask throws for an unknown task id", () => {
   });
 });
 
+test("parseTaskFile ignores schema examples inside fenced code blocks and HTML comments", () => {
+  withTempDir((dir) => {
+    const file = join(dir, "layer-0-todo.md");
+    writeFileSync(
+      file,
+      [
+        "# Layer 0",
+        "",
+        "Documented format:",
+        "",
+        "```markdown",
+        "### T-a3f9c1 — <title>",
+        "- **Status:** todo",
+        "- **Assignee:** ai",
+        "```",
+        "",
+        "<!--",
+        "### T-b3f9c1 — another example",
+        "- **Status:** todo",
+        "- **Assignee:** ai",
+        "-->",
+        "",
+        "---",
+        "",
+        "### T-13ab58 — Real task",
+        "- **Status:** todo",
+        "- **Assignee:** ai",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const tasks = parseTaskFile(file);
+    assert.deepEqual(
+      tasks.map((t) => t.id),
+      ["T-13ab58"],
+    );
+  });
+});
+
 test("STATUSES exposes the full status union in schema order", () => {
   assert.deepEqual(STATUSES, ["todo", "ready", "in-progress", "blocked", "review", "done"]);
 });
