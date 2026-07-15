@@ -10,11 +10,29 @@ runs as a plain Node process, entirely outside any Claude Code session.
 pnpm board
 ```
 
-Starts the server at `http://127.0.0.1:4319` (override with
-`BOARD_PORT=<port> pnpm board`). Open that URL in a browser. Stop it with
-Ctrl-C in the terminal it's running in — it's a long-running foreground
-process, so run it in its own real terminal, not inside a Claude Code
-session (see `/board`).
+Starts the server at `http://127.0.0.1:4319` and prints the exact URL, e.g.
+`Board for "my-project" → http://127.0.0.1:4319`. Open that URL in a browser.
+Stop it with Ctrl-C in the terminal it's running in — it's a long-running
+foreground process, so run it in its own real terminal, not inside a Claude
+Code session (see `/board`).
+
+### Port selection (multi-project friendly)
+
+- **Default:** the board starts at `4319`. If that port is busy, it
+  **auto-advances** to the next free port up to `4339`, so several project
+  boards can run at once without colliding. The startup log always prints the
+  port it actually bound.
+- **Force a port:** `BOARD_PORT=<port> pnpm board` binds exactly that port and
+  does **not** auto-advance — if it's busy the board exits with a clear
+  message (you asked for that specific port).
+- The Host/Origin allowlist is always derived from the **actually-bound**
+  port, so an auto-advanced board only trusts its own real port.
+
+Each board serves only its own repository's `tasks/` — the project name shown
+in the page header and browser-tab title (from the root `package.json` "name",
+falling back to the repo-root directory name) makes two open boards instantly
+distinguishable. It's also available at `GET /api/meta` →
+`{ project, port }`.
 
 ## Two-way sync model
 

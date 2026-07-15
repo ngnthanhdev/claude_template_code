@@ -11,7 +11,7 @@
 import { createServer } from "node:http";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { readFileSync, existsSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import { WebSocketServer, WebSocket } from "ws";
@@ -49,19 +49,51 @@ const tasksDir = join(repoRoot, "tasks");
 const uiPath = join(__dirname, "ui", "index.html");
 const sortablePath = require.resolve("sortablejs/Sortable.min.js");
 
-const PORT = Number(process.env.BOARD_PORT) || 4319;
+/** Display name for this board: the root package.json "name", else the
+ * repo-root directory basename. Lets several boards be told apart at a glance. */
+function resolveProjectName(root: string): string {
+  try {
+    const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as {
+      name?: unknown;
+    };
+    if (typeof pkg.name === "string" && pkg.name.trim() !== "") return pkg.name;
+  } catch {
+    /* fall through to the directory basename */
+  }
+  return basename(root);
+}
+const projectName = resolveProjectName(repoRoot);
+
 const HOST = "127.0.0.1";
 const MAX_BODY_BYTES = 64 * 1024;
 
-// Only accept requests whose Host / WS Origin actually name this local server.
-// A DNS-rebinding attack keeps the attacker's own host (`Host: evil.com`) or a
-// real cross-origin `Origin`, so allowlisting these closes the write/read paths
-// to a page loaded from any other site while leaving local use untouched.
-const ALLOWED_HOSTS = new Set([`127.0.0.1:${PORT}`, `localhost:${PORT}`]);
-const ALLOWED_ORIGINS = new Set([
-  `http://127.0.0.1:${PORT}`,
-  `http://localhost:${PORT}`,
-]);
+// Port resolution: an explicit BOARD_PORT is honored strictly (EADDRINUSE ->
+// clear error + exit). With no BOARD_PORT we start at DEFAULT_PORT and, if it's
+// busy, auto-advance up to MAX_AUTO_PORT so several project boards can run at
+// once without colliding.
+const DEFAULT_PORT = 4319;
+const MAX_AUTO_PORT = 4339;
+const envPortRaw = process.env.BOARD_PORT;
+const envPort =
+  envPortRaw !== undefined && envPortRaw.trim() !== "" ? Number(envPortRaw) : NaN;
+const PORT_EXPLICIT = Number.isInteger(envPort) && envPort > 0;
+const START_PORT = PORT_EXPLICIT ? envPort : DEFAULT_PORT;
+
+// The port actually bound (see start()); the Host/Origin allowlists derive from
+// this, NOT from a hardcoded default, so an auto-advanced board still only
+// trusts its own real port.
+let boundPort = START_PORT;
+
+function isAllowedHost(host: string | undefined): boolean {
+  return host === `127.0.0.1:${boundPort}` || host === `localhost:${boundPort}`;
+}
+function isAllowedOrigin(origin: string | undefined): boolean {
+  return (
+    origin === undefined ||
+    origin === `http://127.0.0.1:${boundPort}` ||
+    origin === `http://localhost:${boundPort}`
+  );
+}
 
 /** Thrown by readBody when a request body exceeds MAX_BODY_BYTES. */
 class BodyTooLargeError extends Error {}
@@ -122,7 +154,7 @@ async function handleRequest(
   res: ServerResponse,
 ): Promise<void> {
   const host = req.headers.host;
-  if (host === undefined || !ALLOWED_HOSTS.has(host)) {
+  if (!isAllowedHost(host)) {
     res.writeHead(403, { "content-type": "text/plain; charset=utf-8" });
     res.end("Forbidden host");
     return;
@@ -141,6 +173,11 @@ async function handleRequest(
     const js = readFileSync(sortablePath, "utf8");
     res.writeHead(200, { "content-type": "text/javascript; charset=utf-8" });
     res.end(js);
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/meta") {
+    sendJson(res, 200, { project: projectName, port: boundPort });
     return;
   }
 
@@ -221,10 +258,17 @@ const wss = new WebSocketServer({
   // A browser page always sends an Origin; a non-browser client (curl, the WS
   // smoke check) sends none. Allow the no-Origin case and our own local
   // origins; reject any real cross-origin page reading the task list.
-  verifyClient: (info: { req: IncomingMessage }) => {
-    const origin = info.req.headers.origin;
-    return origin === undefined || ALLOWED_ORIGINS.has(origin);
-  },
+  verifyClient: (info: { req: IncomingMessage }) =>
+    isAllowedOrigin(info.req.headers.origin),
+});
+
+// ws forwards the shared http server's 'error' onto this WebSocketServer. The
+// port-retry logic lives on the http server (see start()), so this handler
+// only keeps the forwarded EADDRINUSE from crashing the process as an
+// unhandled 'error' event; anything unexpected is still logged.
+wss.on("error", (err: NodeJS.ErrnoException) => {
+  if (err.code === "EADDRINUSE") return; // handled by start() on the http server
+  console.error("WebSocket server error:", err);
 });
 
 function broadcastTasks(): void {
@@ -260,17 +304,41 @@ watcher.on("all", (_event, changedPath) => {
   debounceTimer = setTimeout(broadcastTasks, 100);
 });
 
-server.on("error", (err: NodeJS.ErrnoException) => {
-  if (err.code === "EADDRINUSE") {
-    console.error(
-      `\nBoard server: port ${PORT} is already in use.\n` +
-        `Set BOARD_PORT to a different port, e.g. BOARD_PORT=4320 pnpm board\n`,
-    );
-    process.exit(1);
-  }
-  throw err;
-});
+/** Try to bind `port`. On EADDRINUSE: exit if the port was explicitly
+ * requested, otherwise auto-advance to the next port up to MAX_AUTO_PORT so
+ * multiple project boards can coexist. The listening/error handlers are paired
+ * and each removes the other, so a failed attempt leaves no stale listener
+ * behind to fire on the next attempt's success. */
+function start(port: number): void {
+  const onListening = (): void => {
+    server.removeListener("error", onError);
+    boundPort = port;
+    console.log(`\nBoard for "${projectName}" → http://${HOST}:${port}\n`);
+  };
+  const onError = (err: NodeJS.ErrnoException): void => {
+    server.removeListener("listening", onListening);
+    if (err.code !== "EADDRINUSE") throw err;
 
-server.listen(PORT, HOST, () => {
-  console.log(`\nTask board running at http://${HOST}:${PORT}\n`);
-});
+    if (PORT_EXPLICIT) {
+      console.error(
+        `\nBoard server: port ${port} is already in use.\n` +
+          `Set BOARD_PORT to a free port, e.g. BOARD_PORT=${port + 1} pnpm board\n`,
+      );
+      process.exit(1);
+    }
+    if (port >= MAX_AUTO_PORT) {
+      console.error(
+        `\nBoard server: no free port in range ${DEFAULT_PORT}-${MAX_AUTO_PORT}.\n` +
+          `Free one up, or set BOARD_PORT explicitly.\n`,
+      );
+      process.exit(1);
+    }
+    start(port + 1);
+  };
+
+  server.once("listening", onListening);
+  server.once("error", onError);
+  server.listen(port, HOST);
+}
+
+start(START_PORT);

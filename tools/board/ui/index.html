@@ -219,7 +219,7 @@
 </head>
 <body>
   <header>
-    <h1>Task Board</h1>
+    <h1 id="project-heading">Task Board</h1>
     <p class="legend">
       Drag a card into <strong>Ready</strong> to queue it for AI, then run
       <code>/run-task</code> in Claude Code to dispatch it. This board is a
@@ -421,6 +421,19 @@
       });
     }
 
+    function loadMeta() {
+      fetch("/api/meta")
+        .then((res) => res.json())
+        .then((meta) => {
+          if (!meta || typeof meta.project !== "string") return;
+          document.title = meta.project + " · task board";
+          const heading = document.getElementById("project-heading");
+          if (heading) heading.textContent = meta.project;
+        })
+        .catch((err) => console.error("failed to load /api/meta", err));
+    }
+
+    loadMeta();
     connectWs();
   </script>
 </body>
