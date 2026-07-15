@@ -74,13 +74,21 @@ spawning headless `claude` runs. This is powerful and risky, so it is
 ### ⚠️ Read before enabling
 
 - It spends **real Claude API budget** — every picked task is a full agent run.
-- It **changes code unattended** in isolated git worktrees.
+- It **changes code unattended**, and the headless `claude` child runs with
+  `--permission-mode bypassPermissions` — i.e. **full local capability**
+  (network, arbitrary filesystem, and it inherits the board process's
+  environment). The per-task git worktree isolates *working-tree files* so
+  parallel runs don't corrupt each other; **it does not sandbox the agent.**
+  Treat an armed runner as running trusted code on your machine — for real
+  isolation, run the board in a container or VM.
 - It requires a **logged-in `claude` CLI on your machine** — this template
   ships no credentials and never will; the runner just spawns whatever
   `claude` (or `BOARD_CLAUDE_BIN`) resolves to, using your own login.
-- It **never pushes and never merges.** Every run lands on a throwaway
-  `auto/<id>` branch in its own worktree; a human reviews and merges. Nothing
-  reaches your working branch automatically.
+- **The runner itself never pushes and never merges**, and the enforced
+  no-egress hook (below) blocks the child's `git` push / merge / remote
+  subcommands and the common network tools. Every result lands on a throwaway
+  `auto/<id>` branch you review before it can reach `main` — nothing reaches
+  your working branch automatically.
 
 ### How to enable / disable
 
@@ -100,29 +108,57 @@ picking up any new tasks (in-flight runs finish or you stop the server).
 
 ### Safety model
 
+Be clear-eyed about what does and doesn't contain the agent:
+
 - **Off by default; browser can't weaponize a plain board.** The autonomous
   capability exists only in a process started with `pnpm board:auto`. A plain
   board's runner is constructed unavailable and ignores every arm request.
+  State-changing routes (`POST /api/runner`, `PATCH /api/tasks`) also require a
+  same-origin (or absent) `Origin`, so a foreign web page can't drive them.
 - **Only `Status: ready` + `Assignee: ai` tasks** whose `Depends` are all
   `done` are ever eligible. Nothing else is touched.
-- **Worktree isolation, no auto-merge/push.** Each task runs in its own
-  `git worktree` under the gitignored `.board-worktrees/<id>` on branch
-  `auto/<id>` off current HEAD. Success → `Status: review` (you review + merge
-  the branch). Failure/timeout → `Status: blocked`, and its worktree + branch
-  are removed. There is deliberately no push or merge anywhere in the runner.
+- **The worktree isolates FILES, it does NOT sandbox the agent.** Each task
+  runs in its own `git worktree` under gitignored `.board-worktrees/<id>` on
+  branch `auto/<id>` off HEAD, so concurrent runs can't corrupt each other's
+  working tree. But `--permission-mode bypassPermissions` gives the child full
+  local capability (network, filesystem beyond the worktree, pushing/merging to
+  remotes, and the inherited board env). Do not read "worktree" as an OS-level
+  sandbox.
+- **What actually keeps you safe**, in order: (1) it's **off by default** and
+  only a process you explicitly started with `pnpm board:auto` and then
+  **armed** can act — arming is an act of trust; (2) **no auto-merge/push** —
+  the runner never merges or pushes, so every result lands on a throwaway
+  `auto/<id>` branch you review before it can reach `main` (success →
+  `review`; failure/timeout → `blocked`, worktree + branch removed); (3) the
+  enforced no-egress hook below.
+- **Enforced no-egress boundary (works even under bypassPermissions).** The
+  runner spawns `claude` with `BOARD_RUNNER_NO_EGRESS=1` in its env.
+  `.claude/hooks/block-runner-egress.sh` — a PreToolUse Bash hook wired into
+  `.claude/settings.json` alongside `block-build-output.sh` — runs *regardless
+  of permission mode* and, when that flag is set, denies the `git`
+  push / merge / remote / worktree subcommands and network tools (`curl`,
+  `wget`, `nc`, `ssh`, `scp`). The worktree is checked out from the branch, so
+  the child
+  reads this same `settings.json` + hook. This reliably blocks those specific
+  push/merge/remote/network footguns; **it is not a full network sandbox** — a
+  determined agent could still reach the network by other means, so use a
+  container/VM if you need true isolation.
 - **Caps.** Max 2 tasks concurrently by default (`BOARD_MAX_CONCURRENT`), and
-  only tasks with **disjoint `Files`** lists run together. Each task has a hard
+  only tasks with **disjoint `Files`** lists run together; a task with an empty
+  `Files` list is treated as exclusive and runs alone. Each task has a hard
   wall-clock timeout (`BOARD_TASK_TIMEOUT_MS`, default 15 min); on exceed the
-  child is killed and the task is set `blocked`. A turn/cost cap is passed to
-  `claude` too (see below).
+  whole child **process group** is killed (no orphaned grandchildren) and the
+  task is set `blocked`. A turn/cost cap is passed to `claude` too (see below).
 - **Command-injection safe.** `claude` is spawned with an **args array**, never
   a shell string; the task title/acceptance travel in `argv`, never
   interpolated into a shell. The worktree/branch name uses the validated
   `T-xxxxxx` id (`/^T-[0-9a-f]{6}$/`), never the title.
-- **The repo's hooks still apply to the child.** The worktree checkout carries
-  `.claude/settings.json`, so `block-build-output` still rejects heavy mobile
-  builds inside a run. The headless session's permission bypass is contained to
-  the worktree cwd; it is never pointed at the main repo.
+- **block-build-output still applies.** The worktree checkout carries
+  `.claude/settings.json`, so heavy mobile builds are rejected inside a run too.
+- **Orphan cleanup.** On startup an auto-capable board prunes git's worktree
+  registry and removes leftover `.board-worktrees/*` dirs from a previous,
+  ungracefully-stopped run; `auto/<id>` branches (the `review` artifact) are
+  kept.
 
 ### Configuration (env)
 
@@ -133,7 +169,7 @@ picking up any new tasks (in-flight runs finish or you stop the server).
 | `BOARD_MAX_CONCURRENT` | `2` | Max tasks running at once. |
 | `BOARD_TASK_TIMEOUT_MS` | `900000` | Hard per-task timeout (15 min). |
 | `BOARD_MAX_TURNS` | `25` | Turn cap fed into the default limit args. |
-| `BOARD_PERMISSION_MODE` | `bypassPermissions` | `--permission-mode` for the headless run (contained to the worktree). |
+| `BOARD_PERMISSION_MODE` | `bypassPermissions` | `--permission-mode` for the headless run. The default lets it run unattended without prompts, but grants full local capability — the no-egress hook, not this flag, is what blocks push/merge/remote/network. |
 | `BOARD_CLAUDE_LIMIT_ARGS` | `--max-turns <n>` | Turn/cost-cap args. **Note:** some installed `claude` builds expose `--max-budget-usd` instead of `--max-turns` — set e.g. `BOARD_CLAUDE_LIMIT_ARGS="--max-budget-usd 2"` on those. The hard timeout above is the version-independent containment guarantee. |
 | `BOARD_CLAUDE_EXTRA_ARGS` | (none) | Extra `claude` flags appended verbatim. |
 
