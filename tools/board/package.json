@@ -4,8 +4,9 @@
   "type": "module",
   "scripts": {
     "start": "tsx server.ts",
+    "start:auto": "BOARD_AUTO=1 tsx server.ts",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test lib/*.test.ts"
+    "test": "tsx --test lib/*.test.ts runner.test.ts"
   },
   "dependencies": {
     "chokidar": "^5.0.0",

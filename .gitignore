@@ -11,6 +11,8 @@ ios/
 android/
 # graphify output (generated)
 graphify-out/
+# board autonomous-runner worktrees (generated, per-task, never committed)
+.board-worktrees/
 # env & secrets
 .env
 .env.*.local
