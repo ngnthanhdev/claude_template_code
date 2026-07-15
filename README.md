@@ -39,23 +39,74 @@ triggers Phase 0 automatically the moment you open the repo in Claude Code.
 
 ## Quick start
 
+Three parts: **(1)** bootstrap the project in a terminal, **(2)** open it in Claude Code — pick
+your surface, **(3)** drive the build. Steps 1 and 3 are identical everywhere; only *how you open
+the project* (step 2) differs between the CLI, the desktop app, and an IDE extension.
+
+### 1. Bootstrap the project (terminal, once)
+
 ```bash
-./scripts/start-project.sh
+git clone <this-template-url> my-app
+cd my-app
+./scripts/start-project.sh          # Windows: scripts\start-project.ps1  (or .bat)
 ```
 
-This asks for your project name and either an existing spec/brain‑dump file or a quick description,
-then writes `docs/BRIEF.md` (and `docs/SPECIFICATIONS.md` if you provided one) and makes sure
-`docs/specs/` is empty so Phase 0 will trigger.
+The script asks for a project name and either an existing spec/brain‑dump file **or** a short
+description, then writes `docs/BRIEF.md` (and `docs/SPECIFICATIONS.md` if you gave it a file) and
+makes sure `docs/specs/` is empty — that emptiness is exactly what triggers Phase 0 later.
 
-Then:
+> You only run this once, in a terminal, no matter which Claude Code surface you use next.
 
-1. Open the folder in Claude Code.
-2. `CLAUDE.md`'s hard gate detects there's no design doc in `docs/specs/` yet and Phase 0 starts
-   automatically — Claude will brainstorm your idea with you one question at a time.
-3. Once you approve a design, run `/scope-breakdown` to generate `tasks/layer-0-todo.md`, then
-   `/run-layer` to start implementing.
+### 2. Open the project in Claude Code
 
-Windows users can run `scripts/start-project.ps1` or `scripts/start-project.bat` instead.
+Do **one** of the following. In every case, opening the folder makes Claude read `CLAUDE.md`, whose
+hard gate sees the empty `docs/specs/` and starts **Phase 0** automatically. If it doesn't kick off
+on its own, just type `/phase-0`.
+
+**A — Terminal (CLI)**
+
+```bash
+cd my-app
+claude                              # starts a session in this folder
+```
+
+Claude reads `CLAUDE.md` on start → Phase 0 begins in the terminal.
+
+**B — Desktop app (macOS / Windows)**
+
+1. Open the Claude Code desktop app.
+2. **Open / add** the `my-app` folder as the project (so the app's working directory *is* the repo root).
+3. Start a new session in that folder → `CLAUDE.md` loads → Phase 0 begins.
+
+**C — IDE extension (VS Code / JetBrains)**
+
+1. Install the **Claude Code** extension (VS Code Marketplace or JetBrains Plugins).
+2. Open the `my-app` folder in the IDE.
+3. Open the Claude Code panel and start a session → `CLAUDE.md` loads → Phase 0 begins.
+
+### 3. Drive the build (same on every surface)
+
+1. **Phase 0 (design).** Claude brainstorms your idea **one question at a time**, proposes a few
+   approaches, and writes an approved design to `docs/specs/`. 🔒 **HARD GATE** — nothing is coded
+   or scaffolded until you approve.
+2. **`/scope-breakdown`** — turns the approved design into `tasks/layer-0-todo.md` (the foundation layer).
+3. **`/run-layer`** — implements the current layer with worktree‑isolated `task-implementer`
+   subagents, then `code-reviewer` + `security-reviewer`.
+4. **`/next-layer`** — once the layer's tests pass, advances to the next layer. Repeat 3–4 until done.
+5. **Between layers:** `/checkpoint`, `/learn`, `/graph`.
+6. **Later bugs/features:** `/refine` (brainstorm → `tasks/layer-refinement-todo.md`).
+
+### 4. (Optional) Watch progress on the task board
+
+In a **separate** terminal, from the repo root:
+
+```bash
+pnpm board                          # → http://127.0.0.1:<port>  (prints the project name + URL)
+```
+
+A realtime kanban over `tasks/*.md`. Drag a card into **Ready** to queue it for the AI, then run
+`/run-task` in your Claude Code session to have it picked up. Running several projects at once is
+fine — each board auto‑picks a free port and shows its project name (see `tools/board/README.md`).
 
 ## Repo structure
 
