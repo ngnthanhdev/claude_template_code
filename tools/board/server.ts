@@ -23,6 +23,8 @@ import {
   ASSIGNEES,
 } from "./lib/tasks.ts";
 import type { Status, Assignee, Task } from "./lib/tasks.ts";
+import { Runner, runnerConfigFromEnv } from "./runner.ts";
+import type { RunnerEvent } from "./runner.ts";
 
 const require = createRequire(import.meta.url);
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -111,6 +113,40 @@ function readTasks(): Task[] {
   return lastGoodTasks;
 }
 
+// Autonomous runner. It is only capable of anything when the server was
+// started auto-capable (BOARD_AUTO=1, i.e. `pnpm board:auto`). A plain
+// `pnpm board` constructs it with available:false so it can never arm and
+// never spawns — the browser cannot weaponize a plain board.
+const RUNNER_AVAILABLE = process.env.BOARD_AUTO === "1";
+const runner = new Runner({
+  available: RUNNER_AVAILABLE,
+  repoRoot,
+  tasksDir,
+  config: runnerConfigFromEnv(repoRoot),
+  onEvent: (evt) => onRunnerEvent(evt),
+});
+
+function broadcast(payload: string): void {
+  for (const client of wss.clients) {
+    if (client.readyState === WebSocket.OPEN) client.send(payload);
+  }
+}
+
+function broadcastRunnerState(): void {
+  broadcast(JSON.stringify({ type: "runner", state: runner.getState() }));
+}
+
+function onRunnerEvent(evt: RunnerEvent): void {
+  if (evt.kind === "state") {
+    broadcastRunnerState();
+    return;
+  }
+  // run-start / run-log / run-end: forward the granular event for live per-card
+  // progress, and refresh runner state (the running set just changed).
+  broadcast(JSON.stringify({ type: "runner-event", event: evt }));
+  if (evt.kind !== "run-log") broadcastRunnerState();
+}
+
 function readBody(req: IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
@@ -186,6 +222,16 @@ async function handleRequest(
     return;
   }
 
+  if (req.method === "GET" && url.pathname === "/api/runner") {
+    sendJson(res, 200, runner.getState());
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/runner") {
+    await handleRunnerToggle(req, res);
+    return;
+  }
+
   const patchId = url.pathname.match(/^\/api\/tasks\/([^/]+)$/)?.[1];
   if (req.method === "PATCH" && patchId !== undefined) {
     await handlePatchTask(req, res, patchId);
@@ -253,6 +299,43 @@ async function handlePatchTask(
   sendJson(res, 200, { ok: true });
 }
 
+async function handleRunnerToggle(
+  req: IncomingMessage,
+  res: ServerResponse,
+): Promise<void> {
+  let rawBody: string;
+  try {
+    rawBody = await readBody(req);
+  } catch (err) {
+    if (err instanceof BodyTooLargeError) sendJson(res, 413, { error: "request body too large" });
+    else sendJson(res, 400, { error: "could not read request body" });
+    return;
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(rawBody || "{}");
+  } catch {
+    sendJson(res, 400, { error: "invalid JSON body" });
+    return;
+  }
+  if (typeof parsed !== "object" || parsed === null) {
+    sendJson(res, 400, { error: "body must be a JSON object" });
+    return;
+  }
+  const body = parsed as { enabled?: unknown };
+  if (typeof body.enabled !== "boolean") {
+    sendJson(res, 400, { error: "expected { enabled: boolean }" });
+    return;
+  }
+
+  // setArmed is a no-op when the runner isn't available (plain board): the
+  // browser can request arming, but a plain board simply ignores it and stays
+  // available:false. Only an auto-capable process actually arms.
+  runner.setArmed(body.enabled);
+  sendJson(res, 200, runner.getState());
+}
+
 const wss = new WebSocketServer({
   server,
   // A browser page always sends an Origin; a non-browser client (curl, the WS
@@ -272,10 +355,7 @@ wss.on("error", (err: NodeJS.ErrnoException) => {
 });
 
 function broadcastTasks(): void {
-  const payload = JSON.stringify({ type: "tasks", tasks: readTasks() });
-  for (const client of wss.clients) {
-    if (client.readyState === WebSocket.OPEN) client.send(payload);
-  }
+  broadcast(JSON.stringify({ type: "tasks", tasks: readTasks() }));
 }
 
 wss.on("connection", (ws) => {
@@ -283,6 +363,7 @@ wss.on("connection", (ws) => {
   ws.on("error", () => {});
   try {
     ws.send(JSON.stringify({ type: "tasks", tasks: readTasks() }));
+    ws.send(JSON.stringify({ type: "runner", state: runner.getState() }));
   } catch (err) {
     console.error("failed to send initial snapshot:", err);
   }
@@ -301,8 +382,21 @@ const watcher = chokidar.watch(tasksDir, {
 watcher.on("all", (_event, changedPath) => {
   if (!changedPath.endsWith(".md")) return;
   if (debounceTimer) clearTimeout(debounceTimer);
-  debounceTimer = setTimeout(broadcastTasks, 100);
+  debounceTimer = setTimeout(() => {
+    broadcastTasks();
+    // A change may have made a ready/ai task newly eligible (e.g. a dep just
+    // became done, or a human dragged a card to Ready). Inert unless armed.
+    runner.poke();
+  }, 100);
 });
+
+// Kill any in-flight autonomous runs on shutdown so no orphaned claude child
+// keeps running after the board is stopped.
+function shutdown(): void {
+  void runner.shutdown().finally(() => process.exit(0));
+}
+process.once("SIGINT", shutdown);
+process.once("SIGTERM", shutdown);
 
 /** Try to bind `port`. On EADDRINUSE: exit if the port was explicitly
  * requested, otherwise auto-advance to the next port up to MAX_AUTO_PORT so

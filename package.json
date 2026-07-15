@@ -9,7 +9,8 @@
     "test": "turbo run test",
     "build": "turbo run build",
     "checkpoint": "node scripts/checkpoint.js",
-    "board": "pnpm --filter @tools/board start"
+    "board": "pnpm --filter @tools/board start",
+    "board:auto": "pnpm --filter @tools/board start:auto"
   },
   "devDependencies": {
     "turbo": "^2.1.0",
