@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Task Board</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f4f5f7;
+    --fg: #1b1f24;
+    --muted: #5b6472;
+    --lane-bg: #ffffff;
+    --lane-border: #dfe3e8;
+    --col-bg: #eceff2;
+    --col-header-bg: #e2e6ea;
+    --card-bg: #ffffff;
+    --card-border: #d7dce1;
+    --chip-bg: #eef1f4;
+    --chip-fg: #40495a;
+    --accent: #3b6fe0;
+    --accent-fg: #ffffff;
+    --blocked: #d1453a;
+    --blocked-bg: #fdeceb;
+    --review: #8a4fd6;
+    --review-bg: #f4ecfd;
+    --done: #2e9e5b;
+    --ready: #2f7bd6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14171c;
+      --fg: #e7e9ec;
+      --muted: #9aa3ad;
+      --lane-bg: #1b1f26;
+      --lane-border: #2b303a;
+      --col-bg: #20242c;
+      --col-header-bg: #262b34;
+      --card-bg: #262b34;
+      --card-border: #343a45;
+      --chip-bg: #2f3540;
+      --chip-fg: #c6cdd6;
+      --accent: #6d97ec;
+      --accent-fg: #0d1117;
+      --blocked: #ff6b60;
+      --blocked-bg: #3a1f1e;
+      --review: #b98cf0;
+      --review-bg: #2c2138;
+      --done: #52c184;
+      --ready: #6d97ec;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  header {
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid var(--lane-border);
+    background: var(--lane-bg);
+  }
+  header h1 {
+    margin: 0 0 4px;
+    font-size: 18px;
+  }
+  .legend {
+    margin: 0;
+    color: var(--muted);
+    max-width: 900px;
+    font-size: 13px;
+  }
+  .legend code {
+    background: var(--chip-bg);
+    color: var(--chip-fg);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  .conn {
+    display: inline-block;
+    margin-top: 8px;
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--chip-bg);
+    color: var(--muted);
+  }
+  .conn-live { color: var(--done); }
+  .conn-down { color: var(--blocked); }
+
+  main#board {
+    padding: 16px 20px 40px;
+  }
+  .empty {
+    color: var(--muted);
+    padding: 40px 0;
+    text-align: center;
+  }
+
+  .lane {
+    background: var(--lane-bg);
+    border: 1px solid var(--lane-border);
+    border-radius: 10px;
+    margin-bottom: 18px;
+    padding: 12px;
+  }
+  .lane-title {
+    margin: 0 0 10px 4px;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+  }
+  .columns {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(200px, 1fr));
+    gap: 10px;
+    overflow-x: auto;
+  }
+  .column {
+    background: var(--col-bg);
+    border-radius: 8px;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .column-header {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 8px 10px;
+    color: var(--muted);
+    background: var(--col-header-bg);
+    border-radius: 8px 8px 0 0;
+  }
+  .column.status-ready .column-header { color: var(--ready); }
+  .column.status-blocked .column-header { color: var(--blocked); }
+  .column.status-review .column-header { color: var(--review); }
+  .column.status-done .column-header { color: var(--done); }
+
+  .card-list {
+    flex: 1;
+    padding: 8px;
+    min-height: 60px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-left: 3px solid var(--card-border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    cursor: grab;
+  }
+  .card.sortable-ghost { opacity: 0.4; }
+  .card.sortable-chosen { box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); }
+
+  .column.status-blocked .card {
+    border-left-color: var(--blocked);
+    background: var(--blocked-bg);
+  }
+  .column.status-review .card {
+    border-left-color: var(--review);
+    background: var(--review-bg);
+  }
+  .column.status-ready .card { border-left-color: var(--ready); }
+  .column.status-done .card { border-left-color: var(--done); }
+
+  .card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+  .card-id {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 999px;
+    letter-spacing: 0.03em;
+  }
+  .badge-ai { background: var(--accent); color: var(--accent-fg); }
+  .badge-human { background: var(--chip-bg); color: var(--chip-fg); }
+
+  .card-title {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    word-break: break-word;
+  }
+  .card-meta {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .card-skills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .chip {
+    font-size: 10px;
+    background: var(--chip-bg);
+    color: var(--chip-fg);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Task Board</h1>
+    <p class="legend">
+      Drag a card into <strong>Ready</strong> to queue it for AI, then run
+      <code>/run-task</code> in Claude Code to dispatch it. This board is a
+      view onto <code>tasks/*.md</code> — dragging a card PATCHes only its
+      <code>Status</code>/<code>Assignee</code>; task content stays owned by
+      Claude. Changes made by Claude to the task files appear here live.
+    </p>
+    <span class="conn" id="conn">connecting…</span>
+  </header>
+  <main id="board"><p class="empty">Loading tasks…</p></main>
+
+  <script src="/sortable.js"></script>
+  <script>
+    const STATUSES = ["todo", "ready", "in-progress", "blocked", "review", "done"];
+    const STATUS_LABELS = {
+      todo: "Todo",
+      ready: "Ready",
+      "in-progress": "In Progress",
+      blocked: "Blocked",
+      review: "Review",
+      done: "Done",
+    };
+
+    const state = { tasks: [] };
+    let sortables = [];
+
+    function layerLabel(layer) {
+      if (/^\d+$/.test(layer)) return `Layer ${layer}`;
+      if (layer === "refinement") return "Refinement";
+      if (layer === "done") return "Done (archived)";
+      return layer;
+    }
+
+    function compareLayers(a, b) {
+      const rank = (l) => (/^\d+$/.test(l) ? 0 : l === "refinement" ? 1 : l === "done" ? 2 : 3);
+      const ra = rank(a);
+      const rb = rank(b);
+      if (ra !== rb) return ra - rb;
+      if (ra === 0) return Number(a) - Number(b);
+      return a.localeCompare(b);
+    }
+
+    function renderCard(task) {
+      const card = document.createElement("div");
+      card.className = "card";
+      card.dataset.id = task.id;
+
+      const top = document.createElement("div");
+      top.className = "card-top";
+
+      const idEl = document.createElement("span");
+      idEl.className = "card-id";
+      idEl.textContent = task.id;
+
+      const badge = document.createElement("span");
+      badge.className = "badge badge-" + task.assignee;
+      badge.textContent = task.assignee === "ai" ? "AI" : "Human";
+
+      top.append(idEl, badge);
+
+      const title = document.createElement("div");
+      title.className = "card-title";
+      title.textContent = task.title;
+
+      const meta = document.createElement("div");
+      meta.className = "card-meta";
+      const fileCount = task.files.length;
+      meta.textContent = `${fileCount} file${fileCount === 1 ? "" : "s"}`;
+
+      card.append(top, title, meta);
+
+      if (task.skills.length > 0) {
+        const skillsEl = document.createElement("div");
+        skillsEl.className = "card-skills";
+        for (const skill of task.skills) {
+          const chip = document.createElement("span");
+          chip.className = "chip";
+          chip.textContent = skill;
+          skillsEl.appendChild(chip);
+        }
+        card.appendChild(skillsEl);
+      }
+
+      return card;
+    }
+
+    function handleDrop(evt) {
+      const id = evt.item.dataset.id;
+      const newStatus = evt.to.dataset.status;
+      const task = state.tasks.find((t) => t.id === id);
+      if (!task || task.status === newStatus) return;
+
+      const prevStatus = task.status;
+      task.status = newStatus; // optimistic
+      render();
+
+      fetch(`/api/tasks/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error(`PATCH ${id} failed: ${res.status}`);
+        })
+        .catch((err) => {
+          console.error(err);
+          task.status = prevStatus; // revert, board will re-sync on next WS message anyway
+          render();
+        });
+    }
+
+    function render() {
+      for (const s of sortables) s.destroy();
+      sortables = [];
+
+      const board = document.getElementById("board");
+      board.innerHTML = "";
+
+      if (state.tasks.length === 0) {
+        board.innerHTML = '<p class="empty">No tasks found under tasks/*.md.</p>';
+        return;
+      }
+
+      const layers = [...new Set(state.tasks.map((t) => t.layer))].sort(compareLayers);
+
+      for (const layer of layers) {
+        const laneTasks = state.tasks.filter((t) => t.layer === layer);
+
+        const lane = document.createElement("section");
+        lane.className = "lane";
+
+        const laneTitle = document.createElement("h2");
+        laneTitle.className = "lane-title";
+        laneTitle.textContent = layerLabel(layer);
+        lane.appendChild(laneTitle);
+
+        const cols = document.createElement("div");
+        cols.className = "columns";
+
+        for (const status of STATUSES) {
+          const colTasks = laneTasks.filter((t) => t.status === status);
+
+          const col = document.createElement("div");
+          col.className = "column status-" + status;
+
+          const colHeader = document.createElement("div");
+          colHeader.className = "column-header";
+          colHeader.textContent = `${STATUS_LABELS[status]} (${colTasks.length})`;
+          col.appendChild(colHeader);
+
+          const list = document.createElement("div");
+          list.className = "card-list";
+          list.dataset.layer = layer;
+          list.dataset.status = status;
+          for (const task of colTasks) list.appendChild(renderCard(task));
+          col.appendChild(list);
+
+          cols.appendChild(col);
+
+          sortables.push(
+            new Sortable(list, {
+              group: "layer-" + layer,
+              animation: 150,
+              onAdd: handleDrop,
+            }),
+          );
+        }
+
+        lane.appendChild(cols);
+        board.appendChild(lane);
+      }
+    }
+
+    function connectWs() {
+      const protocol = location.protocol === "https:" ? "wss:" : "ws:";
+      const ws = new WebSocket(`${protocol}//${location.host}`);
+      const connEl = document.getElementById("conn");
+
+      ws.addEventListener("open", () => {
+        connEl.textContent = "live";
+        connEl.className = "conn conn-live";
+      });
+      ws.addEventListener("close", () => {
+        connEl.textContent = "disconnected — retrying…";
+        connEl.className = "conn conn-down";
+        setTimeout(connectWs, 1000);
+      });
+      ws.addEventListener("error", () => ws.close());
+      ws.addEventListener("message", (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === "tasks" && Array.isArray(msg.tasks)) {
+            state.tasks = msg.tasks;
+            render();
+          }
+        } catch (err) {
+          console.error("bad WS message", err);
+        }
+      });
+    }
+
+    connectWs();
+  </script>
+</body>
+</html>

@@ -3,9 +3,18 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "start": "tsx server.ts",
     "test": "tsx --test lib/*.test.ts"
   },
+  "dependencies": {
+    "chokidar": "^5.0.0",
+    "sortablejs": "^1.15.7",
+    "ws": "^8.21.1"
+  },
   "devDependencies": {
+    "@types/node": "^20.19.0",
+    "@types/ws": "^8.18.1",
     "tsx": "^4.19.0"
   }
 }
+
