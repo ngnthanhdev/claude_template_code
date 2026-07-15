@@ -81,7 +81,7 @@ function stripCr(line: string): string {
 function inferLayerFromFilename(filePath: string): string | null {
   const name = basename(filePath);
   const m = name.match(LAYER_FROM_FILENAME_RE);
-  if (m) return m[1];
+  if (m && m[1] !== undefined) return m[1];
   if (name === "layer-refinement-todo.md") return "refinement";
   return null;
 }
@@ -90,9 +90,11 @@ function inferLayerFromFilename(filePath: string): string | null {
  * upward for the nearest "## Layer N" / "## Refinement" section heading. */
 function inferLayerFallback(lines: string[], headingIdx: number): string {
   for (let i = headingIdx - 1; i >= 0; i--) {
-    const layerMatch = lines[i].match(/^##\s+Layer\s+(\d+)/i);
-    if (layerMatch) return layerMatch[1];
-    if (/^##\s+Refinement/i.test(lines[i])) return "refinement";
+    const line = lines[i];
+    if (line === undefined) continue;
+    const layerMatch = line.match(/^##\s+Layer\s+(\d+)/i);
+    if (layerMatch && layerMatch[1] !== undefined) return layerMatch[1];
+    if (/^##\s+Refinement/i.test(line)) return "refinement";
   }
   return "done";
 }
@@ -108,7 +110,9 @@ function computeLiveMask(lines: string[]): boolean[] {
   let inFence = false;
   let inComment = false;
   for (let i = 0; i < lines.length; i++) {
-    const line = stripCr(lines[i]);
+    const rawLine = lines[i];
+    if (rawLine === undefined) continue;
+    const line = stripCr(rawLine);
     if (inFence) {
       mask[i] = false;
       if (/^\s*```/.test(line)) inFence = false;
@@ -141,18 +145,26 @@ export function parseTaskFile(filePath: string): Task[] {
 
   const headingIdxs: number[] = [];
   for (let i = 0; i < lines.length; i++) {
-    if (liveMask[i] && HEADING_RE.test(stripCr(lines[i]))) headingIdxs.push(i);
+    const line = lines[i];
+    if (line !== undefined && liveMask[i] && HEADING_RE.test(stripCr(line))) {
+      headingIdxs.push(i);
+    }
   }
 
   const tasks: Task[] = [];
 
   for (let h = 0; h < headingIdxs.length; h++) {
     const idx = headingIdxs[h];
-    const headingMatch = stripCr(lines[idx]).match(HEADING_RE)!;
+    const headingLine = idx === undefined ? undefined : lines[idx];
+    const headingMatch =
+      headingLine === undefined ? null : stripCr(headingLine).match(HEADING_RE);
+    if (idx === undefined || headingMatch === null) continue;
     const id = headingMatch[1];
     const title = headingMatch[2];
+    if (id === undefined || title === undefined) continue;
 
-    const blockEnd = h + 1 < headingIdxs.length ? headingIdxs[h + 1] : lines.length;
+    const nextIdx = headingIdxs[h + 1];
+    const blockEnd = nextIdx ?? lines.length;
 
     const fields: Record<string, string> = {};
     const notesLines: string[] = [];
@@ -160,15 +172,17 @@ export function parseTaskFile(filePath: string): Task[] {
     let inNotes = false;
 
     for (let i = idx + 1; i < blockEnd; i++) {
-      const line = stripCr(lines[i]);
+      const rawLine = lines[i];
+      if (rawLine === undefined) continue;
+      const line = stripCr(rawLine);
 
       if (RULE_RE.test(line)) break; // horizontal rule ends the block's content
 
       if (!inNotes) {
         const fieldMatch = line.match(FIELD_RE);
-        if (fieldMatch) {
+        if (fieldMatch && fieldMatch[1] !== undefined) {
           const key = fieldMatch[1];
-          fields[key] = stripComments(fieldMatch[2]);
+          fields[key] = stripComments(fieldMatch[2] ?? "");
           currentField = key;
           continue;
         }
@@ -207,7 +221,10 @@ export function parseTaskFile(filePath: string): Task[] {
       throw new Error(`${filePath}: task ${id} has invalid Assignee "${assigneeRaw}"`);
     }
 
-    while (notesLines.length && notesLines[notesLines.length - 1].trim() === "") {
+    while (
+      notesLines.length &&
+      (notesLines[notesLines.length - 1] ?? "").trim() === ""
+    ) {
       notesLines.pop();
     }
 
@@ -259,7 +276,9 @@ export function patchTask(
   let headingIdx = -1;
   for (let i = 0; i < lines.length; i++) {
     if (!liveMask[i]) continue;
-    const m = stripCr(lines[i]).match(HEADING_RE);
+    const line = lines[i];
+    if (line === undefined) continue;
+    const m = stripCr(line).match(HEADING_RE);
     if (m && m[1] === id) {
       headingIdx = i;
       break;
@@ -271,7 +290,8 @@ export function patchTask(
 
   let blockEnd = lines.length;
   for (let i = headingIdx + 1; i < lines.length; i++) {
-    if (liveMask[i] && HEADING_RE.test(stripCr(lines[i]))) {
+    const line = lines[i];
+    if (liveMask[i] && line !== undefined && HEADING_RE.test(stripCr(line))) {
       blockEnd = i;
       break;
     }
@@ -281,10 +301,11 @@ export function patchTask(
     const re = new RegExp(`^(- \\*\\*${key}:\\*\\*\\s*)(\\S+)(.*)$`);
     for (let i = headingIdx + 1; i < blockEnd; i++) {
       const line = lines[i];
+      if (line === undefined) continue;
       const hadCr = line.endsWith("\r");
       const m = stripCr(line).match(re);
       if (m) {
-        lines[i] = `${m[1]}${value}${m[3]}${hadCr ? "\r" : ""}`;
+        lines[i] = `${m[1] ?? ""}${value}${m[3] ?? ""}${hadCr ? "\r" : ""}`;
         return;
       }
     }

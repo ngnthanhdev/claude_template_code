@@ -54,6 +54,8 @@ test("parseTaskFile parses a sample multi-task file", () => {
     assert.equal(tasks.length, 2);
 
     const [first, second] = tasks;
+    assert.ok(first);
+    assert.ok(second);
 
     assert.equal(first.id, "T-13ab58");
     assert.equal(first.title, "Scaffold the Expo app in apps/mobile");
@@ -93,6 +95,7 @@ test("parseTaskFile is robust to tasks that omit optional fields", () => {
     const tasks = parseTaskFile(file);
     assert.equal(tasks.length, 1);
     const [task] = tasks;
+    assert.ok(task);
 
     assert.equal(task.id, "T-a463b5");
     assert.equal(task.status, "todo");
@@ -161,9 +164,15 @@ test("patchTask changes only the target Status/Assignee line, byte for byte else
     // Only the Status and Assignee lines of T-804011 should differ.
     assert.equal(changedLines.length, 2);
     for (const i of changedLines) {
-      assert.match(afterLines[i], /^- \*\*(Status|Assignee):\*\*/);
+      const lineText = afterLines[i];
+      assert.ok(lineText !== undefined);
+      assert.match(lineText, /^- \*\*(Status|Assignee):\*\*/);
     }
-    assert.match(afterLines[changedLines[0]], /ready|human/);
+    const firstChanged = changedLines[0];
+    assert.ok(firstChanged !== undefined);
+    const firstChangedText = afterLines[firstChanged];
+    assert.ok(firstChangedText !== undefined);
+    assert.match(firstChangedText, /ready|human/);
 
     // The other task (T-13ab58) and every other line must be untouched.
     const reparsed = parseTaskFile(file);

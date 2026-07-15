@@ -22,7 +22,7 @@ import {
   STATUSES,
   ASSIGNEES,
 } from "./lib/tasks.ts";
-import type { Status, Assignee } from "./lib/tasks.ts";
+import type { Status, Assignee, Task } from "./lib/tasks.ts";
 
 const require = createRequire(import.meta.url);
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -51,11 +51,49 @@ const sortablePath = require.resolve("sortablejs/Sortable.min.js");
 
 const PORT = Number(process.env.BOARD_PORT) || 4319;
 const HOST = "127.0.0.1";
+const MAX_BODY_BYTES = 64 * 1024;
+
+// Only accept requests whose Host / WS Origin actually name this local server.
+// A DNS-rebinding attack keeps the attacker's own host (`Host: evil.com`) or a
+// real cross-origin `Origin`, so allowlisting these closes the write/read paths
+// to a page loaded from any other site while leaving local use untouched.
+const ALLOWED_HOSTS = new Set([`127.0.0.1:${PORT}`, `localhost:${PORT}`]);
+const ALLOWED_ORIGINS = new Set([
+  `http://127.0.0.1:${PORT}`,
+  `http://localhost:${PORT}`,
+]);
+
+/** Thrown by readBody when a request body exceeds MAX_BODY_BYTES. */
+class BodyTooLargeError extends Error {}
+
+/** Last successfully-parsed task list. Served when a fresh parse fails (e.g. a
+ * task file caught mid-write) so a bad/half-written file can neither crash the
+ * server nor blank the board — it just keeps showing the last good state. */
+let lastGoodTasks: Task[] = [];
+function readTasks(): Task[] {
+  try {
+    lastGoodTasks = parseTasksDir(tasksDir);
+  } catch (err) {
+    console.error("tasks parse failed; serving last-good snapshot:", err);
+  }
+  return lastGoodTasks;
+}
 
 function readBody(req: IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
-    req.on("data", (chunk: Buffer) => chunks.push(chunk));
+    let size = 0;
+    req.on("data", (chunk: Buffer) => {
+      size += chunk.length;
+      if (size > MAX_BODY_BYTES) {
+        // Stop buffering (memory stays bounded) and reject; the caller sends
+        // 413 and then closes the socket. Do NOT destroy here — that would
+        // tear the socket down before the 413 response can be written.
+        reject(new BodyTooLargeError());
+        return;
+      }
+      chunks.push(chunk);
+    });
     req.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
     req.on("error", reject);
   });
@@ -72,7 +110,10 @@ function sendJson(res: ServerResponse, status: number, body: unknown): void {
 
 const server = createServer((req, res) => {
   void handleRequest(req, res).catch((err: unknown) => {
-    sendJson(res, 500, { error: err instanceof Error ? err.message : String(err) });
+    // Never echo the error detail to the client — it can leak filesystem paths.
+    console.error("Unhandled request error:", err);
+    if (!res.headersSent) sendJson(res, 500, { error: "internal server error" });
+    else res.end();
   });
 });
 
@@ -80,7 +121,14 @@ async function handleRequest(
   req: IncomingMessage,
   res: ServerResponse,
 ): Promise<void> {
-  const url = new URL(req.url ?? "/", `http://${req.headers.host ?? HOST}`);
+  const host = req.headers.host;
+  if (host === undefined || !ALLOWED_HOSTS.has(host)) {
+    res.writeHead(403, { "content-type": "text/plain; charset=utf-8" });
+    res.end("Forbidden host");
+    return;
+  }
+
+  const url = new URL(req.url ?? "/", `http://${host}`);
 
   if (req.method === "GET" && url.pathname === "/") {
     const html = readFileSync(uiPath, "utf8");
@@ -97,7 +145,7 @@ async function handleRequest(
   }
 
   if (req.method === "GET" && url.pathname === "/api/tasks") {
-    sendJson(res, 200, { tasks: parseTasksDir(tasksDir) });
+    sendJson(res, 200, { tasks: readTasks() });
     return;
   }
 
@@ -116,9 +164,22 @@ async function handlePatchTask(
   res: ServerResponse,
   id: string,
 ): Promise<void> {
+  let rawBody: string;
+  try {
+    rawBody = await readBody(req);
+  } catch (err) {
+    if (err instanceof BodyTooLargeError) {
+      sendJson(res, 413, { error: "request body too large" });
+      req.destroy(); // cut off the rest of an oversized upload after replying
+    } else {
+      sendJson(res, 400, { error: "could not read request body" });
+    }
+    return;
+  }
+
   let parsed: unknown;
   try {
-    parsed = JSON.parse((await readBody(req)) || "{}");
+    parsed = JSON.parse(rawBody || "{}");
   } catch {
     sendJson(res, 400, { error: "invalid JSON body" });
     return;
@@ -142,7 +203,7 @@ async function handlePatchTask(
     return;
   }
 
-  const task = parseTasksDir(tasksDir).find((t) => t.id === id);
+  const task = readTasks().find((t) => t.id === id);
   if (!task) {
     sendJson(res, 400, { error: `unknown task id "${id}"` });
     return;
@@ -155,24 +216,44 @@ async function handlePatchTask(
   sendJson(res, 200, { ok: true });
 }
 
-const wss = new WebSocketServer({ server });
+const wss = new WebSocketServer({
+  server,
+  // A browser page always sends an Origin; a non-browser client (curl, the WS
+  // smoke check) sends none. Allow the no-Origin case and our own local
+  // origins; reject any real cross-origin page reading the task list.
+  verifyClient: (info: { req: IncomingMessage }) => {
+    const origin = info.req.headers.origin;
+    return origin === undefined || ALLOWED_ORIGINS.has(origin);
+  },
+});
 
 function broadcastTasks(): void {
-  const payload = JSON.stringify({ type: "tasks", tasks: parseTasksDir(tasksDir) });
+  const payload = JSON.stringify({ type: "tasks", tasks: readTasks() });
   for (const client of wss.clients) {
     if (client.readyState === WebSocket.OPEN) client.send(payload);
   }
 }
 
 wss.on("connection", (ws) => {
-  ws.send(JSON.stringify({ type: "tasks", tasks: parseTasksDir(tasksDir) }));
+  // A socket-level error (reset, broken pipe) must not crash the process.
+  ws.on("error", () => {});
+  try {
+    ws.send(JSON.stringify({ type: "tasks", tasks: readTasks() }));
+  } catch (err) {
+    console.error("failed to send initial snapshot:", err);
+  }
 });
 
 // Watch the whole tasks/ directory (rather than a glob string) and filter by
 // extension in the handler — robust across chokidar versions that vary in
 // glob-string support, and simpler than reconciling that compatibility matrix.
+// awaitWriteFinish waits for a file to stop changing before firing, so a
+// partial save can't trigger a parse of a half-written file.
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-const watcher = chokidar.watch(tasksDir, { ignoreInitial: true });
+const watcher = chokidar.watch(tasksDir, {
+  ignoreInitial: true,
+  awaitWriteFinish: { stabilityThreshold: 100, pollInterval: 50 },
+});
 watcher.on("all", (_event, changedPath) => {
   if (!changedPath.endsWith(".md")) return;
   if (debounceTimer) clearTimeout(debounceTimer);
