@@ -65,15 +65,90 @@ swimlanes by `layer` (Layer 0, Layer 1, ..., Refinement); a card can move
 between columns within its own lane, but not across lanes (layer isn't a
 patchable field).
 
+## Autonomous runner (opt-in, OFF by default)
+
+The board can optionally *implement* ready tasks for you, unattended, by
+spawning headless `claude` runs. This is powerful and risky, so it is
+**off by default** and cannot be turned on from the browser on a plain board.
+
+### ⚠️ Read before enabling
+
+- It spends **real Claude API budget** — every picked task is a full agent run.
+- It **changes code unattended** in isolated git worktrees.
+- It requires a **logged-in `claude` CLI on your machine** — this template
+  ships no credentials and never will; the runner just spawns whatever
+  `claude` (or `BOARD_CLAUDE_BIN`) resolves to, using your own login.
+- It **never pushes and never merges.** Every run lands on a throwaway
+  `auto/<id>` branch in its own worktree; a human reviews and merges. Nothing
+  reaches your working branch automatically.
+
+### How to enable / disable
+
+```bash
+pnpm board:auto      # start the server auto-CAPABLE (still disarmed)
+```
+
+`pnpm board` (the normal command) starts the server with the runner **fully
+inert**: `GET /api/runner` reports `{available:false}`, the arm switch does
+nothing, and nothing can ever spawn. Only `pnpm board:auto` (which sets
+`BOARD_AUTO=1`) makes the runner *capable* of arming.
+
+Even when auto-capable, the runner starts **disarmed**. Arm it from the board
+UI's **Auto-run** switch (a red ARMED banner appears), or via
+`POST /api/runner {"enabled":true}`. Disarm the same way — disarming stops it
+picking up any new tasks (in-flight runs finish or you stop the server).
+
+### Safety model
+
+- **Off by default; browser can't weaponize a plain board.** The autonomous
+  capability exists only in a process started with `pnpm board:auto`. A plain
+  board's runner is constructed unavailable and ignores every arm request.
+- **Only `Status: ready` + `Assignee: ai` tasks** whose `Depends` are all
+  `done` are ever eligible. Nothing else is touched.
+- **Worktree isolation, no auto-merge/push.** Each task runs in its own
+  `git worktree` under the gitignored `.board-worktrees/<id>` on branch
+  `auto/<id>` off current HEAD. Success → `Status: review` (you review + merge
+  the branch). Failure/timeout → `Status: blocked`, and its worktree + branch
+  are removed. There is deliberately no push or merge anywhere in the runner.
+- **Caps.** Max 2 tasks concurrently by default (`BOARD_MAX_CONCURRENT`), and
+  only tasks with **disjoint `Files`** lists run together. Each task has a hard
+  wall-clock timeout (`BOARD_TASK_TIMEOUT_MS`, default 15 min); on exceed the
+  child is killed and the task is set `blocked`. A turn/cost cap is passed to
+  `claude` too (see below).
+- **Command-injection safe.** `claude` is spawned with an **args array**, never
+  a shell string; the task title/acceptance travel in `argv`, never
+  interpolated into a shell. The worktree/branch name uses the validated
+  `T-xxxxxx` id (`/^T-[0-9a-f]{6}$/`), never the title.
+- **The repo's hooks still apply to the child.** The worktree checkout carries
+  `.claude/settings.json`, so `block-build-output` still rejects heavy mobile
+  builds inside a run. The headless session's permission bypass is contained to
+  the worktree cwd; it is never pointed at the main repo.
+
+### Configuration (env)
+
+| Var | Default | Meaning |
+|---|---|---|
+| `BOARD_AUTO` | unset | `1` makes the runner auto-capable (set by `pnpm board:auto`). |
+| `BOARD_CLAUDE_BIN` | `claude` | Binary to spawn per task (injectable for testing). |
+| `BOARD_MAX_CONCURRENT` | `2` | Max tasks running at once. |
+| `BOARD_TASK_TIMEOUT_MS` | `900000` | Hard per-task timeout (15 min). |
+| `BOARD_MAX_TURNS` | `25` | Turn cap fed into the default limit args. |
+| `BOARD_PERMISSION_MODE` | `bypassPermissions` | `--permission-mode` for the headless run (contained to the worktree). |
+| `BOARD_CLAUDE_LIMIT_ARGS` | `--max-turns <n>` | Turn/cost-cap args. **Note:** some installed `claude` builds expose `--max-budget-usd` instead of `--max-turns` — set e.g. `BOARD_CLAUDE_LIMIT_ARGS="--max-budget-usd 2"` on those. The hard timeout above is the version-independent containment guarantee. |
+| `BOARD_CLAUDE_EXTRA_ARGS` | (none) | Extra `claude` flags appended verbatim. |
+
 ## Architecture
 
 - `server.ts` — Node `http` server (no framework): serves the UI, a
-  `GET /api/tasks` snapshot, a `PATCH /api/tasks/:id` write path, a
-  locally-served copy of `sortablejs` (no CDN), and a `ws` WebSocket channel
-  fed by a `chokidar` watcher on `tasks/`.
+  `GET /api/tasks` snapshot, a `PATCH /api/tasks/:id` write path, the
+  `GET/POST /api/runner` endpoints, a locally-served copy of `sortablejs` (no
+  CDN), and a `ws` WebSocket channel fed by a `chokidar` watcher on `tasks/`.
+- `runner.ts` — the opt-in autonomous runner (worktree isolation, per-task
+  `claude` spawn, caps, `review`/`blocked` transitions). Inert unless the
+  server was started with `BOARD_AUTO=1`.
 - `ui/index.html` — the entire client: one self-contained file (no build
   step), vanilla JS, SortableJS for drag-and-drop, a plain `WebSocket` for
-  the realtime feed.
+  the realtime feed, and the Auto-run indicator/switch.
 - `lib/tasks.ts` — the parser/serializer foundation (pre-existing); the
   board only ever calls its public `parseTasksDir`/`patchTask` API, it does
   not touch the task-block text format directly.
