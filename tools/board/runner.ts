@@ -24,7 +24,7 @@
 
 import { spawn } from "node:child_process";
 import type { ChildProcess } from "node:child_process";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { parseTasksDir, patchTask } from "./lib/tasks.ts";
 import type { Task } from "./lib/tasks.ts";
@@ -95,6 +95,9 @@ export interface WorktreeManager {
   removeWorktree(id: string): Promise<void>;
   /** Delete the `auto/<id>` branch (best-effort). */
   removeBranch(id: string): Promise<void>;
+  /** Prune git's worktree registry and remove orphaned `.board-worktrees/<id>`
+   * dirs that have no active run. Branches (the `review` artifact) are kept. */
+  reconcile(): Promise<void>;
 }
 
 function runGit(repoRoot: string, args: string[]): Promise<void> {
@@ -159,6 +162,31 @@ export class GitWorktreeManager implements WorktreeManager {
   async removeBranch(id: string): Promise<void> {
     if (!TASK_ID_RE.test(id)) return;
     await runGit(this.repoRoot, ["branch", "-D", this.branchFor(id)]).catch(() => {});
+  }
+
+  /** Called once at startup (no runs are active then): prune git's worktree
+   * registry and remove any leftover per-task worktree dirs from a previous,
+   * ungracefully-stopped server. The `auto/<id>` branches are deliberately
+   * NOT deleted — a `review` task's branch is the artifact the human merges. */
+  async reconcile(): Promise<void> {
+    await runGit(this.repoRoot, ["worktree", "prune"]).catch(() => {});
+    let entries: string[];
+    try {
+      entries = readdirSync(this.baseDir);
+    } catch {
+      return; // baseDir doesn't exist yet — nothing to reconcile
+    }
+    for (const name of entries) {
+      if (!TASK_ID_RE.test(name)) continue;
+      const path = this.pathFor(name);
+      await runGit(this.repoRoot, ["worktree", "remove", "--force", path]).catch(() => {});
+      try {
+        rmSync(path, { recursive: true, force: true });
+      } catch {
+        /* best-effort */
+      }
+    }
+    await runGit(this.repoRoot, ["worktree", "prune"]).catch(() => {});
   }
 }
 
@@ -225,13 +253,27 @@ function layerRank(layer: string): number {
  * the tasks that may start this round — `ready` + `ai` + valid id + satisfied
  * Depends, ordered by layer then id, limited to the free concurrency slots,
  * and Files-disjoint from both running tasks and each other.
+ *
+ * A task with an EMPTY `Files` list is treated as **exclusive**: because its
+ * true footprint is unknown, it must run alone — it may start only when nothing
+ * is running or already selected this round, and while it runs (or is selected)
+ * nothing else may start. This closes the gap where two empty-`Files` tasks
+ * would otherwise run concurrently over the same real files.
  */
 export function selectEligibleTasks(
   tasks: Task[],
-  opts: { runningIds: Set<string>; runningFiles: Set<string>; maxConcurrent: number },
+  opts: {
+    runningIds: Set<string>;
+    runningFiles: Set<string>;
+    /** True if a running task holds an exclusive (empty-`Files`) lock. */
+    runningExclusive: boolean;
+    maxConcurrent: number;
+  },
 ): Task[] {
   const slots = opts.maxConcurrent - opts.runningIds.size;
   if (slots <= 0) return [];
+  // An exclusive task is already running — nothing else may start.
+  if (opts.runningExclusive) return [];
 
   const eligible = tasks
     .filter(
@@ -246,8 +288,21 @@ export function selectEligibleTasks(
 
   const usedFiles = new Set(opts.runningFiles);
   const selected: Task[] = [];
+  let exclusiveClaimed = false;
   for (const t of eligible) {
     if (selected.length >= slots) break;
+    if (exclusiveClaimed) break; // an exclusive task took the whole round
+
+    if (t.files.length === 0) {
+      // Exclusive: only when the board is otherwise idle (nothing running and
+      // nothing already selected this round).
+      if (opts.runningIds.size === 0 && selected.length === 0) {
+        selected.push(t);
+        exclusiveClaimed = true;
+      }
+      continue; // otherwise it waits for an idle round
+    }
+
     if (t.files.some((f) => usedFiles.has(f))) continue;
     selected.push(t);
     for (const f of t.files) usedFiles.add(f);
@@ -340,6 +395,13 @@ export class Runner {
     this.worktrees =
       opts.worktrees ?? new GitWorktreeManager(opts.repoRoot, opts.config.worktreeDir);
     this.parseTasks = opts.parseTasks ?? (() => parseTasksDir(opts.tasksDir));
+    // Clean up worktrees orphaned by a previously ungracefully-stopped server.
+    // Only meaningful for an auto-capable board; a plain board never spawns.
+    if (this.available) {
+      void this.worktrees.reconcile().catch((err) => {
+        console.error("runner: worktree reconcile failed:", err);
+      });
+    }
   }
 
   getState(): RunnerState {
@@ -380,11 +442,16 @@ export class Runner {
     }
 
     const runningFiles = new Set<string>();
-    for (const h of this.running.values()) for (const f of h.files) runningFiles.add(f);
+    let runningExclusive = false;
+    for (const h of this.running.values()) {
+      for (const f of h.files) runningFiles.add(f);
+      if (h.files.length === 0) runningExclusive = true;
+    }
 
     const selected = selectEligibleTasks(tasks, {
       runningIds: new Set(this.running.keys()),
       runningFiles,
+      runningExclusive,
       maxConcurrent: this.opts.config.maxConcurrent,
     });
     if (selected.length === 0) return;
@@ -448,7 +515,13 @@ export class Runner {
     try {
       child = spawn(this.opts.config.claudeBin, args, {
         cwd: worktree,
-        env: process.env,
+        // Inherit the board env plus BOARD_RUNNER_NO_EGRESS, the flag the
+        // block-runner-egress PreToolUse hook keys on to deny push/merge/remote
+        // and network tools even under --permission-mode bypassPermissions.
+        env: { ...process.env, BOARD_RUNNER_NO_EGRESS: "1" },
+        // Own process group so a timeout/shutdown can signal the whole tree
+        // (claude + any grandchildren), not just the direct child.
+        detached: true,
         stdio: ["ignore", "pipe", "pipe"],
       });
     } catch (err) {
@@ -501,12 +574,30 @@ export class Runner {
     }
   }
 
+  /** Signal the child's whole process group (it was spawned detached), so a
+   * grandchild claude spawned can't be orphaned. Falls back to signalling the
+   * direct child if the group signal fails for anything but ESRCH. */
+  private signalTree(child: ChildProcess, sig: NodeJS.Signals): void {
+    const pid = child.pid;
+    if (pid === undefined) return;
+    try {
+      process.kill(-pid, sig); // negative pid => the process group
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === "ESRCH") return; // already gone
+      try {
+        child.kill(sig);
+      } catch {
+        /* already gone */
+      }
+    }
+  }
+
   private kill(handle: RunHandle): void {
     const child = handle.child;
     if (!child || child.exitCode !== null) return;
-    child.kill("SIGTERM");
+    this.signalTree(child, "SIGTERM");
     const grace = setTimeout(() => {
-      if (child.exitCode === null) child.kill("SIGKILL");
+      if (child.exitCode === null) this.signalTree(child, "SIGKILL");
     }, 3000);
     grace.unref();
   }
@@ -554,14 +645,14 @@ export class Runner {
     }
   }
 
-  /** Stop picking new work and kill any in-flight children. */
+  /** Stop picking new work and kill any in-flight process trees. */
   async shutdown(): Promise<void> {
     this.armed = false;
     for (const handle of this.running.values()) {
       handle.finished = true;
       if (handle.timer) clearTimeout(handle.timer);
       const child = handle.child;
-      if (child && child.exitCode === null) child.kill("SIGKILL");
+      if (child && child.exitCode === null) this.signalTree(child, "SIGKILL");
     }
     this.running.clear();
   }

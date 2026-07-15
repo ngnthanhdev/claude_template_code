@@ -108,6 +108,11 @@ class FakeWorktrees implements WorktreeManager {
     this.removedBranches.push(id);
     return Promise.resolve();
   }
+  reconcileCalls = 0;
+  reconcile(): Promise<void> {
+    this.reconcileCalls++;
+    return Promise.resolve();
+  }
 }
 
 function testConfig(claudeBin: string, over: Partial<RunnerConfig> = {}): RunnerConfig {
@@ -171,6 +176,7 @@ test("selectEligibleTasks: only ready + ai + valid id are eligible", () => {
   const selected = selectEligibleTasks(tasks, {
     runningIds: new Set(),
     runningFiles: new Set(),
+    runningExclusive: false,
     maxConcurrent: 10,
   });
   assert.deepEqual(
@@ -199,6 +205,7 @@ test("selectEligibleTasks: unsatisfied Depends excludes the task", () => {
   const selected = selectEligibleTasks(tasks, {
     runningIds: new Set(),
     runningFiles: new Set(),
+    runningExclusive: false,
     maxConcurrent: 10,
   });
   // T-000002 depends on T-000001 which isn't done -> only T-000001 runs.
@@ -218,6 +225,7 @@ test("selectEligibleTasks: concurrency cap + Files-disjoint", () => {
   const selected = selectEligibleTasks(tasks, {
     runningIds: new Set(),
     runningFiles: new Set(),
+    runningExclusive: false,
     maxConcurrent: 2,
   });
   assert.deepEqual(
@@ -229,11 +237,71 @@ test("selectEligibleTasks: concurrency cap + Files-disjoint", () => {
   const selected2 = selectEligibleTasks(tasks, {
     runningIds: new Set(["T-aaaaaa"]),
     runningFiles: new Set(["x"]),
+    runningExclusive: false,
     maxConcurrent: 2,
   });
   assert.deepEqual(
     selected2.map((t) => t.id),
     ["T-bbbbbb"],
+  );
+});
+
+test("selectEligibleTasks: an empty-Files task is exclusive (runs alone)", () => {
+  const tasks = [
+    makeTask({ id: "T-aaaaaa", files: [] }), // exclusive
+    makeTask({ id: "T-bbbbbb", files: ["y"] }),
+    makeTask({ id: "T-cccccc", files: [] }), // exclusive
+  ];
+
+  // Idle board, cap 2: the first (exclusive) task claims the whole round alone.
+  const selected = selectEligibleTasks(tasks, {
+    runningIds: new Set(),
+    runningFiles: new Set(),
+    runningExclusive: false,
+    maxConcurrent: 2,
+  });
+  assert.deepEqual(
+    selected.map((t) => t.id),
+    ["T-aaaaaa"],
+  );
+
+  // An empty-Files task cannot start while anything else is running.
+  const whileBusy = selectEligibleTasks(tasks, {
+    runningIds: new Set(["T-bbbbbb"]),
+    runningFiles: new Set(["y"]),
+    runningExclusive: false,
+    maxConcurrent: 2,
+  });
+  assert.deepEqual(
+    whileBusy.map((t) => t.id),
+    [], // T-aaaaaa/T-cccccc are exclusive; nothing else is eligible
+  );
+
+  // While an exclusive task is running, nothing new starts at all.
+  const whileExclusive = selectEligibleTasks(tasks, {
+    runningIds: new Set(["T-aaaaaa"]),
+    runningFiles: new Set(),
+    runningExclusive: true,
+    maxConcurrent: 2,
+  });
+  assert.deepEqual(whileExclusive, []);
+});
+
+test("selectEligibleTasks: a non-exclusive task selected first blocks a later exclusive one", () => {
+  const tasks = [
+    makeTask({ id: "T-aaaaaa", files: ["x"] }),
+    makeTask({ id: "T-bbbbbb", files: [] }), // exclusive, sorts after by id
+  ];
+  const selected = selectEligibleTasks(tasks, {
+    runningIds: new Set(),
+    runningFiles: new Set(),
+    runningExclusive: false,
+    maxConcurrent: 2,
+  });
+  // A is picked first; the exclusive B can't join a round that already has work.
+  assert.deepEqual(
+    selected.map((t) => t.id),
+    ["T-aaaaaa"],
   );
 });
 
@@ -354,6 +422,92 @@ test("Runner: respects concurrency cap and never runs Files-clashing tasks toget
     assert.ok(maxActive <= 2, `maxActive was ${maxActive}`);
     assert.equal(aAndCEverConcurrent, false, "A and C share a file and must not overlap");
     await runner.shutdown();
+  });
+});
+
+test("Runner: empty-Files tasks are serialized, never run concurrently", async () => {
+  await withTasksDir(async (dir) => {
+    writeTasksFile(dir, "layer-0-todo.md", [
+      { id: "T-aaaaaa", status: "ready", assignee: "ai", files: [] },
+      { id: "T-bbbbbb", status: "ready", assignee: "ai", files: [] },
+    ]);
+    const worktrees = new FakeWorktrees();
+    const active = new Set<string>();
+    let maxActive = 0;
+    const runner = new Runner({
+      available: true,
+      repoRoot: dir,
+      tasksDir: dir,
+      config: testConfig(makeStub(0, 100), { maxConcurrent: 2 }),
+      onEvent: (e) => {
+        if (e.kind === "run-start") active.add(e.id);
+        if (e.kind === "run-end") active.delete(e.id);
+        maxActive = Math.max(maxActive, active.size);
+      },
+      worktrees,
+    });
+
+    runner.setArmed(true);
+    await waitFor(
+      () =>
+        statusOf(dir, "T-aaaaaa") === "review" && statusOf(dir, "T-bbbbbb") === "review",
+    );
+
+    // Even with 2 free slots, the two exclusive (empty-Files) tasks never overlap.
+    assert.equal(maxActive, 1, `empty-Files tasks overlapped (maxActive=${maxActive})`);
+    await runner.shutdown();
+  });
+});
+
+test("Runner: a task that exceeds its timeout is killed and blocked", async () => {
+  await withTasksDir(async (dir) => {
+    writeTasksFile(dir, "layer-0-todo.md", [
+      { id: "T-aaaaaa", status: "ready", assignee: "ai", files: ["a"] },
+    ]);
+    const worktrees = new FakeWorktrees();
+    const events: RunnerEvent[] = [];
+    const runner = new Runner({
+      available: true,
+      repoRoot: dir,
+      tasksDir: dir,
+      config: testConfig(makeStub(0, 4000), { timeoutMs: 250 }),
+      onEvent: (e) => events.push(e),
+      worktrees,
+    });
+
+    runner.setArmed(true);
+    await waitFor(() => statusOf(dir, "T-aaaaaa") === "blocked", { timeoutMs: 10000 });
+
+    const end = events.find((e) => e.kind === "run-end" && e.id === "T-aaaaaa");
+    assert.ok(end && end.kind === "run-end" && end.result === "blocked");
+    assert.match(String(end.reason), /timed out/);
+    await runner.shutdown();
+  });
+});
+
+test("Runner: reconcile runs on construction only when available", async () => {
+  await withTasksDir(async (dir) => {
+    const wtAvail = new FakeWorktrees();
+    new Runner({
+      available: true,
+      repoRoot: dir,
+      tasksDir: dir,
+      config: testConfig("/bin/true"),
+      onEvent: () => {},
+      worktrees: wtAvail,
+    });
+    assert.equal(wtAvail.reconcileCalls, 1);
+
+    const wtPlain = new FakeWorktrees();
+    new Runner({
+      available: false,
+      repoRoot: dir,
+      tasksDir: dir,
+      config: testConfig("/bin/true"),
+      onEvent: () => {},
+      worktrees: wtPlain,
+    });
+    assert.equal(wtPlain.reconcileCalls, 0);
   });
 });
 
