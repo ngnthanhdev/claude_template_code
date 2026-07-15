@@ -196,6 +196,20 @@ async function handleRequest(
     return;
   }
 
+  // CSRF defense for the state-changing routes: a cross-origin page can issue a
+  // no-preflight POST/PATCH with `text/plain`, and the Host check alone won't
+  // stop it. Apply the exact same Origin allowlist the WS upgrade uses — a
+  // present-but-foreign Origin is rejected; a missing Origin (curl/non-browser)
+  // is allowed, matching verifyClient.
+  if (
+    (req.method === "POST" || req.method === "PATCH") &&
+    !isAllowedOrigin(req.headers.origin)
+  ) {
+    res.writeHead(403, { "content-type": "text/plain; charset=utf-8" });
+    res.end("Forbidden origin");
+    return;
+  }
+
   const url = new URL(req.url ?? "/", `http://${host}`);
 
   if (req.method === "GET" && url.pathname === "/") {
