@@ -114,6 +114,18 @@ the project's memory durable and the session's context small:
   `GRAPH_REPORT.md`, giving a quick dependency-graph sanity check as the
   codebase grows.
 
+## Task board (PM view)
+
+`tools/board/` is a small realtime dashboard over `tasks/*.md` — run it with
+`pnpm board` (outside the Claude Code session; see `/board`). It's the PM
+view onto the same layer loop above: swimlanes by layer, columns by
+`Status`. Dragging a card into **Ready** is how a human queues a task for AI
+without going through `/pick-task`; `/run-task` drains that queue the same
+way `/run-layer` drains a layer file, honoring layer order and `Depends`.
+The board reflects every `Status` change — whether made by a
+`task-implementer`, `/run-task`, or a manual drag — live, because it watches
+`tasks/*.md` directly; it never edits task content itself.
+
 ## Refinement
 
 Once the initial layers are built, ongoing bug reports and feature requests

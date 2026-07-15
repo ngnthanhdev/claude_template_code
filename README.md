@@ -94,6 +94,9 @@ claude_template_code/
 ├── .github/workflows/
 │   ├── ci.yml  eas-preview.yml  eas-production.yml  api-deploy.yml
 │
+├── tools/
+│   └── board/                     # realtime task-board dashboard (`pnpm board`)
+│
 ├── scripts/
 │   ├── start-project.sh / .ps1 / .bat   checkpoint.js
 │
@@ -135,6 +138,28 @@ advancing to the next layer before its tests pass; (3) no hard‑coded secrets �
 | `/refine` | Brainstorm a reported bug/feature, then append it to `tasks/layer-refinement-todo.md` |
 | `/security-review` | Run `security-review` over a diff/PR/path → high-confidence security findings |
 | `/threat-model` | Run `security-threat-model` on a named feature before implementation |
+| `/board` | How to launch the realtime task-board dashboard (`pnpm board`, runs outside this session) |
+| `/run-task` | Drain every `Status: ready` task across `tasks/*.md` via worktree‑isolated `task-implementer`s |
+
+## Task dashboard
+
+`tools/board/` is a small, dependency-light realtime kanban view over
+`tasks/*.md` — a PM-facing dashboard, not part of the Claude Code engine.
+Run it with:
+
+```bash
+pnpm board
+```
+
+then open `http://127.0.0.1:4319`. It renders the six `Status` columns
+(Todo → Ready → In Progress → Blocked → Review → Done) as swimlanes grouped
+by layer, updating live over WebSocket whenever `tasks/*.md` changes on
+disk. Dragging a card into **Ready** is the "assign to AI" action — it
+PATCHes that task's `Status`, and `/run-task` picks up whatever's sitting in
+Ready next. The board only ever writes `Status`/`Assignee`; task content
+stays owned by Claude. It's a plain Node process — start it in its own
+terminal, not inside a Claude Code session (see `/board` and
+`tools/board/README.md`).
 
 ## Skills
 

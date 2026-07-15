@@ -134,6 +134,8 @@ claude_template_code/
 | `/refine` | Brainstorm a reported bug/feature → append to `tasks/layer-refinement-todo.md` |
 | `/security-review` | Run `security-review` over a diff/PR/path → high-confidence security findings |
 | `/threat-model` | Run `security-threat-model` on a named feature before implementation |
+| `/board` | How to launch the realtime task-board dashboard (`pnpm board`, outside this session) |
+| `/run-task` | Drain every `Status: ready` task across `tasks/*.md` via worktree-isolated `task-implementer`s |
 
 ## Subagents
 
