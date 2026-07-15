@@ -18,16 +18,21 @@ The user has reported: $ARGUMENTS
      need a `debugger` pass first to find the root cause before it can be
      scoped as a task?
 2. Append it to `tasks/layer-refinement-todo.md` using the same task-block
-   format `scope-planner` uses for any other layer task:
+   format `scope-planner` uses for any other layer task — a level-3 heading
+   with a fresh, stable `T-xxxxxx` id (`T-` + 6 lowercase hex, never reused),
+   followed by its metadata list:
    ```markdown
-   ### Task: <short name>
-
-   **Files:** <concrete paths expected to change>
-
-   **Skills:** <.claude/skills/* to load>
-
-   **Acceptance criteria:**
-   - [ ] <checkable condition>
+   ### T-a3f9c1 — <short name>
+   - **Status:** todo
+   - **Assignee:** ai
+   - **Files:** <concrete paths expected to change>
+   - **Acceptance:** <checkable condition(s) — a single line, or an indented sub-list for more than one>
+   - **Skills:** <.claude/skills/* to load>
+   - **Depends:** <other T-xxxxxx in this file, omit if none>
    ```
+   A new refinement task always starts at `Status: todo`. Set
+   `Assignee: ai` unless step 1's brainstorm surfaced a decision only a human
+   can make (e.g. a product trade-off the report didn't resolve), in which
+   case use `Assignee: human`.
 3. Tell the user it's queued and ready to be picked up by `/run-layer` (or
    `/pick-task` first, if they want to review it before implementation).

@@ -58,16 +58,28 @@ approved design document as its input. It works in three passes:
    generated as each prior one completes, not all up front, since later
    layers may need to react to what was actually learned/decided in earlier ones).
 
-Each task written into a layer file includes:
+Each task written into a layer file is a level-3 heading carrying a stable
+`T-xxxxxx` id, followed by a metadata list that includes:
 
+- **Id** — `T-` + 6 lowercase hex characters, assigned once and never
+  reused, so the task can be referenced (by `Depends`, by a future board UI,
+  by a commit message) without ambiguity.
+- **Status** — `todo | ready | in-progress | blocked | review | done`. New
+  tasks start at `todo`; `/run-layer` and its `task-implementer`s move it
+  forward as work progresses (see `docs/WORKFLOW.md` and
+  `.claude/commands/run-layer.md`).
+- **Assignee** — `ai` (the default) or `human`, for a task that needs a
+  human decision before a `task-implementer` can act on it.
 - **Files** — the concrete paths the task is expected to touch (scope
   control: a `task-implementer` should not need to go outside this list).
-- **Acceptance criteria** — a checkable definition of done, usually including
+- **Acceptance** — a checkable definition of done, usually including
   the test(s) that must pass.
-- **Relevant skills** — which `.claude/skills/*` the `task-implementer`
+- **Skills** — which `.claude/skills/*` the `task-implementer`
   should load before starting (e.g. a mobile form task loads
   `mobile-data-forms` and `shared-contracts`; a Prisma model task loads
   `database-orm`).
+- **Depends** (optional) — another `T-xxxxxx` in the same layer file that
+  must run first.
 
 ## Example: a typical Expo + NestJS product
 

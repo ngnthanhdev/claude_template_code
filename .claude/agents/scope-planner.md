@@ -37,19 +37,30 @@ implementation — you never write application code.
 
 ## Task block format
 
-Every task you write must include:
+Every task you write must be a level-3 heading with a stable `T-xxxxxx` id
+(`T-` + 6 lowercase hex characters, generated fresh per task and never
+reused), followed by a metadata list:
 
 ```markdown
-### Task <n>: <short name>
-
-**Files:** <concrete paths this task is expected to touch>
-
-**Skills:** <.claude/skills/* names the task-implementer should load>
-
-**Acceptance criteria:**
-- [ ] <checkable condition, usually including which test(s) must pass>
-- [ ] ...
+### T-a3f9c1 — <short name>
+- **Status:** todo
+- **Assignee:** ai
+- **Files:** <concrete paths this task is expected to touch>
+- **Acceptance:** <checkable definition of done, usually including which test(s) must pass>
+- **Skills:** <.claude/skills/* names the task-implementer should load>
+- **Depends:** <other T-xxxxxx in this layer, omit if none>
 ```
+
+- Every new task starts at `Status: todo`. Set `Assignee: ai` unless the
+  task requires a human decision before a `task-implementer` can act on it
+  (e.g. picking between architectural options the spec left open), in which
+  case use `Assignee: human`.
+- `Acceptance` may be a single line or, for a task with multiple checkable
+  conditions, an indented sub-list directly under the `- **Acceptance:**`
+  bullet — either is fine as long as it stays one field.
+- Only set `Depends` when another task **in this same layer file** must run
+  first; never reference a task from a different layer (cross-layer order is
+  already enforced by the layer boundary itself).
 
 ## Rules
 
