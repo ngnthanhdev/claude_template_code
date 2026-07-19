@@ -126,6 +126,7 @@ don't belong in a principles document:
 |---|---|
 | `/phase-0` | Plan Mode + `brainstorming` skill → approved design in `docs/specs/` (HARD GATE) |
 | `/scope-breakdown` | Dispatch `scope-planner` → generate `tasks/layer-*.md` |
+| `/analyze` | Read-only gate: cross-check spec ↔ `docs/SCOPE_BREAKDOWN.md` ↔ tasks + constitution compliance — run before `/run-layer` |
 | `/pick-task` | Show the next unchecked task in the current layer + load its skills |
 | `/run-layer` | Fan out the layer's independent tasks to worktree-isolated `task-implementer`s, merge, review |
 | `/next-layer` | Gate: tests pass → advance `tasks/done.md` → create next layer → bump Current Layer |

@@ -2,6 +2,10 @@
 description: Fan out every independent task in the current layer to its own worktree-isolated task-implementer, merge the results, then run code-reviewer and security-reviewer on each diff.
 ---
 
+Assumes `/analyze` has already passed for this layer (or the user has
+explicitly chosen to proceed despite its findings) — this command does not
+re-run that check itself.
+
 Read the current `tasks/layer-N-todo.md` (per `CLAUDE.md`'s "Current Layer"
 pointer) and identify every task whose `Status` is still `todo` or `ready`
 and whose **Files** list does not overlap with another such task's — those

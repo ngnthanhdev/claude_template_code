@@ -71,6 +71,24 @@ files. Layer 0 is always the foundation layer: scaffolding the Expo app, the
 NestJS API, `packages/shared`, and wiring CI, per the approved stack. See
 `docs/SCOPE_BREAKDOWN.md` for the full layering methodology.
 
+## Consistency gate (`/analyze`)
+
+Before the first `/run-layer` against a freshly generated
+`tasks/layer-N-todo.md`, run `/analyze` — a read-only, main-thread command
+(no subagent dispatched). It cross-checks the approved spec(s) in
+`docs/specs/`, the layering methodology in `docs/SCOPE_BREAKDOWN.md`, and the
+generated task file against each other for: **coverage** (a spec requirement
+with no task, or a task with no spec basis), **consistency**
+(stack/data-shape/ordering contradictions across spec ↔ plan ↔ tasks),
+**constitution compliance** (a task or plan violating a
+`docs/CONSTITUTION.md` Article, cited by number), and **structural gaps**
+(missing `Acceptance`, dangling or cyclic `Depends`, overlapping `Files`
+within a layer). It reports a **PASS** or a ranked list of issues — it never
+edits `docs/specs/`, `docs/SCOPE_BREAKDOWN.md`, or any `tasks/*.md` file
+itself. Treat a non-PASS result as advisory-gating: fix what it finds
+(re-run `/scope-breakdown`, or hand-edit the task file) before starting
+`/run-layer`.
+
 ## The layer loop
 
 Each layer is worked through the same four-step loop:
@@ -150,6 +168,7 @@ up by `/run-layer`.
 |---|---|---|---|
 | Design | `/phase-0` | — (`brainstorming` skill, main thread) | Opus |
 | Scope | `/scope-breakdown` | `scope-planner` | Opus |
+| Consistency gate | `/analyze` | — (main thread, read-only) | — |
 | Pick work | `/pick-task` | — | — |
 | Implement | `/run-layer` | `task-implementer` (fan-out) | Sonnet |
 | Review | `/run-layer` (post-merge step) | `code-reviewer` | Opus |

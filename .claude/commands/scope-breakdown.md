@@ -19,4 +19,7 @@ foundation layer — `apps/mobile`, `apps/api`, `packages/shared`, CI — unless
 `tasks/layer-0-todo.md` already exists and is complete).
 
 After it returns, show the user the generated task file and confirm it
-looks right before moving on to `/pick-task` or `/run-layer`.
+looks right, then suggest `/analyze` next — it cross-checks the new task
+file against the approved spec, `docs/SCOPE_BREAKDOWN.md`, and
+`docs/CONSTITUTION.md` before anything is picked up by `/pick-task` or
+`/run-layer`.

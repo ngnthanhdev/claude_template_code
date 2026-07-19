@@ -180,6 +180,7 @@ advancing to the next layer before its tests pass; (3) no hard‑coded secrets �
 |---|---|
 | `/phase-0` | Enter Plan Mode, run the `brainstorming` skill, write the approved design to `docs/specs/` (HARD GATE — no code first) |
 | `/scope-breakdown` | Dispatch the `scope-planner` subagent against the approved spec → create `tasks/layer-*.md` |
+| `/analyze` | Read-only gate: cross-check spec ↔ `docs/SCOPE_BREAKDOWN.md` ↔ generated tasks + constitution compliance, before `/run-layer` |
 | `/pick-task` | Show the next task in the current layer and load its relevant skills |
 | `/run-layer` | Fan out independent tasks in the current layer to worktree‑isolated `task-implementer` subagents, merge, then run `code-reviewer` |
 | `/next-layer` | Verify the layer's tests pass, advance `tasks/done.md`, create the next layer, bump "Current Layer" in `CLAUDE.md` |
