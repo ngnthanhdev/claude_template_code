@@ -8,7 +8,10 @@ to what you're about to do.
 
 ## <HARD-GATE> FIRST-TIME SETUP
 
-Before touching any code, app, or scaffold in this repo:
+This operationalizes **Article I — Spec Before Code** of
+`docs/CONSTITUTION.md` (the constitution is this repo's highest authority;
+see there for the full principle). Before touching any code, app, or
+scaffold in this repo:
 
 1. Check `docs/specs/` for an approved design document.
 2. **If `docs/specs/` is empty (only `.gitkeep`), do not write or scaffold any
@@ -32,6 +35,8 @@ the gate and offer `/phase-0` instead.
 
 ## Guides (`@`-imports)
 
+- @docs/CONSTITUTION.md — governing principles; the highest authority in
+  this repo, cited by specs/plans/reviews
 - @docs/WORKFLOW.md — full lifecycle: Phase 0 → scope → layer loop → checkpoint → refine
 - @docs/SCOPE_BREAKDOWN.md — how layers and tasks are derived from the approved spec
 - @docs/CI_CD.md — the five GitHub Actions workflows, required secrets, gate rules
@@ -104,20 +109,16 @@ claude_template_code/
 
 ## Coding rules
 
-- **TypeScript strict, no `any`.** Use narrowing, discriminated unions, and
-  `satisfies` instead — see the `typescript-strict` skill.
-- **Test right after each task.** Don't move to the next task with a red or
-  untested change.
-- **1 commit = 1 task.** Conventional commit format: `feat/fix/test/chore(scope): …`.
-  Never bundle multiple tasks into one commit.
-- **Scope control.** A task touches only the files listed in its acceptance
-  criteria. If you discover you need more, stop and say so rather than
-  silently expanding scope.
-- **Secrets only in `.env` / `packages/shared/config`.** Never hard-code a
-  secret, API key, or credential anywhere else.
-- **Brainstorm before new features.** Any feature or major change not already
-  covered by the approved spec goes through `/refine` (brainstorm →
-  `tasks/layer-refinement-todo.md`) before implementation — never straight to code.
+TypeScript strictness, testing discipline, scope control, secrets handling,
+and commit discipline are governed by `docs/CONSTITUTION.md` (Articles III,
+IV, V, VIII, IX) — this section only holds the operational specifics that
+don't belong in a principles document:
+
+- **Commit format.** `feat/fix/test/chore(scope): …`, one commit per task
+  (Article IX) — never bundle multiple tasks into one commit.
+- **New feature or major change not already in the approved spec?** Route it
+  through `/refine` (brainstorm → `tasks/layer-refinement-todo.md`) before
+  implementation — never straight to code (Article I).
 
 ## Slash commands
 

@@ -45,6 +45,9 @@ explicit range passed to you):
 ## Output
 
 Report each finding with: file + line, a one-sentence summary of the
-defect, the concrete failure scenario (what input/state triggers it), and a
-verdict (`CONFIRMED`/`PLAUSIBLE`). Do not pad the list with low-confidence
-style nitpicks — an empty findings list is a valid, good outcome.
+defect, the concrete failure scenario (what input/state triggers it), a
+verdict (`CONFIRMED`/`PLAUSIBLE`), and — when the finding also violates a
+`docs/CONSTITUTION.md` Article (e.g. Article III strict typing, Article
+VIII scope control) — that Article's number. Do not pad the list with
+low-confidence style nitpicks — an empty findings list is a valid, good
+outcome.

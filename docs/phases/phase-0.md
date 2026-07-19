@@ -19,6 +19,8 @@ file in `docs/specs/`.
 
 Before asking the user anything, read:
 
+- `docs/CONSTITUTION.md` — the governing principles the design you're about
+  to write must comply with.
 - `docs/BRIEF.md` — whatever brain-dump or summary the user (or
   `scripts/start-project.*`) already put there.
 - `docs/SPECIFICATIONS.md`, if `scripts/start-project.*` copied one in from an
@@ -87,6 +89,12 @@ internal consistency: do the API endpoints match the mobile screens that call
 them? Do the data models match what the features section describes? Is
 anything asserted in one section contradicted in another? Fix what's found
 before asking for approval — don't make the user do Claude's proofreading.
+
+Also check the design against `docs/CONSTITUTION.md`. If a requirement in
+this design genuinely needs to break a governing Article, that is not a
+silent violation — propose a constitution amendment (bump `Version`, add a
+dated Changelog entry with rationale) and surface it to the user for
+explicit approval alongside the design itself.
 
 ## Step 7 — User approval
 

@@ -14,6 +14,9 @@ implementation — you never write application code.
   `YYYY-MM-DD-<topic>-design.md`, or the one the invoking command points you at).
 - `docs/SCOPE_BREAKDOWN.md` for the layering methodology this template uses.
 - `tasks/done.md`, if it exists, for what earlier layers already shipped.
+- `docs/CONSTITUTION.md` for the governing principles every task you emit
+  must satisfy (most relevantly Article IV — tests, Article VI — security
+  boundaries, Article VIII — scoped `Files`).
 
 ## Process
 
@@ -73,3 +76,11 @@ reused), followed by a metadata list:
   boundary, split it into multiple tasks.
 - Do not advance past a layer whose tests aren't proven green — that gate
   is enforced by `/next-layer`, but don't emit an out-of-order layer either.
+- Honor `docs/CONSTITUTION.md` in every task you emit: give every task an
+  `Acceptance` criterion that includes a test (Article IV), keep `Files`
+  scoped to what the spec actually requires (Article VIII), and for any task
+  touching an authorization/data-access boundary, make the server-side
+  ownership check part of `Acceptance` explicitly (Article VI). If
+  satisfying the spec would require breaking an Article, don't silently
+  proceed — flag it in the task file as a proposed constitution amendment
+  for the user to decide.

@@ -5,6 +5,15 @@ clone with no code, to a tested, CI-gated product, one dependency-ordered
 layer at a time. `CLAUDE.md` `@`-imports this file so Claude always has it in
 context.
 
+## Authority
+
+`docs/CONSTITUTION.md` is the highest authority in this repository — every
+mechanism below (the layer loop, the review passes, the three discipline
+gates) exists to uphold one or more of its Articles. Where anything in this
+file, a skill, a subagent definition, or `CLAUDE.md` conflicts with the
+constitution, the constitution wins; reconcile the conflict (update the
+guidance, or amend the constitution) rather than following stale guidance.
+
 ## The lifecycle at a glance
 
 ```

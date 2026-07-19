@@ -23,7 +23,9 @@ exists and has been approved.
 ## <HARD GATE>
 
 **No code, no scaffold, no `apps/*` or `packages/*` change happens until this
-skill produces an approved design.** This is not satisfied by:
+skill produces an approved design.** This is Article I of
+`docs/CONSTITUTION.md` — see there for the full principle; this section is
+the operational detail for satisfying it. This is not satisfied by:
 
 - a verbal description in chat ("okay let's just build X"),
 - a partial or draft document,
@@ -48,6 +50,8 @@ checks for it every session.
 
 Before asking anything, read what's already written:
 
+- `docs/CONSTITUTION.md` — the governing principles this design (or
+  refinement item) must comply with.
 - `docs/BRIEF.md` — a brain-dump or summary, possibly written by
   `scripts/start-project.*`.
 - `docs/SPECIFICATIONS.md`, if a prior spec file was copied in.
@@ -177,9 +181,14 @@ internal consistency:
 - Is anything asserted in one section contradicted by another?
 - Are non-goals actually respected by the rest of the document (no feature
   described elsewhere that the non-goals section rules out)?
+- Does anything here conflict with a `docs/CONSTITUTION.md` Article?
 
 Fix what's found before asking for approval. Don't make the user do Claude's
-proofreading.
+proofreading. A genuine conflict with a constitution Article is not a
+silent violation to just fix and move on from — propose a constitution
+amendment (bump `Version`, add a dated Changelog entry with rationale) and
+surface it to the user for explicit approval alongside the design/refinement
+item itself.
 
 ### Phase 6 — User approval
 

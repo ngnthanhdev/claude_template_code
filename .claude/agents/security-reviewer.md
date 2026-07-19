@@ -75,6 +75,9 @@ Report each finding with exactly this structure — no partial entries:
 - **Regression test** — the specific test that would catch a regression.
 - **ASVS/MASVS category** — ASVS for `apps/api` findings, MASVS for
   `apps/mobile` findings.
+- **Constitution Article** — the `docs/CONSTITUTION.md` Article this finding
+  violates (most often Article VI — security & privilege boundaries; cite
+  Article V instead for a hard-coded secret).
 
 Do not restate what `code-reviewer` already covers (naming, duplication,
 simplification) — that's a different pass. An empty findings list is a
