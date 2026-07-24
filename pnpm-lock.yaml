@@ -9,8 +9,8 @@ importers:
   .:
     devDependencies:
       prettier:
-        specifier: ^3.3.0
-        version: 3.9.4
+        specifier: ^3.9.6
+        version: 3.9.6
       turbo:
         specifier: ^2.1.0
         version: 2.10.4
@@ -251,8 +251,8 @@ packages:
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
     os: [darwin]
 
-  prettier@3.9.4:
-    resolution: {integrity: sha512-yWG/o/4oJfo036EKAfK6ACAoDOfHeRHx4tuxkfBZiauURiaSmYwlpOr5LQqKtIkRD2z1PLteme2WoxEnj4tHTg==}
+  prettier@3.9.6:
+    resolution: {integrity: sha512-OpN0zzVdiaiAhxpuuj5efpIS4sY9j7bY6uR5mnj5yPzGkdkjNKSJeUThPb60Jw29QuAZgA4o+/iB49kFiaBX6g==}
     engines: {node: '>=14'}
     hasBin: true
 
@@ -434,7 +434,7 @@ snapshots:
   fsevents@2.3.3:
     optional: true
 
-  prettier@3.9.4: {}
+  prettier@3.9.6: {}
 
   readdirp@5.0.0: {}
 
