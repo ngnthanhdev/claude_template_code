@@ -18,7 +18,7 @@ jobs:
   gitleaks:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { fetch-depth: 0 }
       # Secret scan — flags credential-shaped strings in the diff/history.
       - name: Gitleaks (secret scan)
@@ -32,7 +32,7 @@ jobs:
     container:
       image: semgrep/semgrep
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # SAST — becomes meaningful once apps/api and apps/mobile have real
       # TypeScript/JavaScript source for these rulesets to check.
       - name: Semgrep (SAST)
@@ -47,7 +47,7 @@ jobs:
   dependency-audit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
         with: { version: 9 }
       - uses: actions/setup-node@v4
