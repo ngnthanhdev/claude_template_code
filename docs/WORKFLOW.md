@@ -122,6 +122,10 @@ does `/next-layer` run:
 
 - Verifies the gate: **all tests pass**. If not, the layer isn't finished —
   loop back into `/run-layer` or `/refine` a fix.
+- Tags the checkpoint (`git tag layer-N-done`) once the gate passes — the
+  rollback point the "Rollback & checkpoints" section of
+  `.claude/skills/git-workflow/SKILL.md` resets to if the layer needs to be
+  undone.
 - Appends the layer's completed tasks to `tasks/done.md`.
 - Creates the next `tasks/layer-N+1-todo.md`.
 - Bumps the "Current Layer" / "Current Task" pointers in `CLAUDE.md`.

@@ -118,6 +118,90 @@ outside the fan-out flow):
 - [ ] `code-reviewer`'s findings (if it ran on this diff) are addressed or
       explicitly deferred with a reason, not silently ignored.
 
+## Rollback & checkpoints
+
+Every scenario below assumes the commit discipline above (one commit per
+task, conventional messages) — that discipline is what makes each of these
+precise instead of a guess about what a bigger revert might take with it.
+
+### Checkpoint tags — `layer-N-done`
+
+Once a layer's gate passes (`/next-layer`'s test-green check), it stamps a
+tag:
+
+```bash
+git tag layer-2-done
+```
+
+This is a checkpoint, not a branch — a fixed point you can always reset or
+diff against, even after several more layers have landed on top. See
+`.claude/commands/next-layer.md` (it tags automatically before bumping
+`CLAUDE.md`'s Current Layer) and `docs/WORKFLOW.md`.
+
+### Stash before a risky operation
+
+Before anything that could discard uncommitted work (a rebase, an
+experimental change you might back out of, a merge you're not sure will go
+cleanly):
+
+```bash
+git stash push -u -m "safety-<what-youre-about-to-try>"
+```
+
+`-u` includes untracked files. Restore with `git stash pop` (or
+`git stash apply` to keep it in the stash list until you're sure you don't
+need it again).
+
+### Revert one task
+
+A single task's commit is wrong and hasn't been built on yet:
+
+```bash
+git reset --soft HEAD~1   # undoes the commit, keeps the changes staged
+```
+
+Use `--soft` (not `--hard`) unless you're certain you want the file
+changes gone too, not just the commit. If other commits already sit on top
+of the one you want gone, use `git revert <sha>` instead — it adds a new
+commit undoing that one rather than rewriting history other commits may
+depend on.
+
+### Revert a whole layer
+
+A layer turned out fundamentally wrong and you want to go back to the last
+known-good checkpoint:
+
+```bash
+git reset --hard layer-(N-1)-done
+```
+
+This throws away every commit made since the previous layer's checkpoint —
+confirm `git log layer-(N-1)-done..HEAD --oneline` shows only work you
+actually intend to lose before running it, and stash anything uncommitted
+first (see above). Prefer a range `git revert` over `reset --hard` if the
+layer's commits have already been pushed and someone else may have pulled
+them.
+
+### Abandon or revert an autonomous-runner branch
+
+The task board (`tools/board/`) runs each autonomous task in its own
+worktree/branch — `.board-worktrees/<id>` on branch `auto/<id>` (see
+`tools/board/README.md`). To abandon a run that hasn't merged anywhere:
+
+```bash
+git worktree remove .board-worktrees/<id> --force
+git branch -D auto/<id>
+```
+
+To undo a run whose `auto/<id>` branch was **already merged** into the
+layer branch, don't delete anything — `git revert` the merge (or the
+individual commits it brought in) instead, the same as any other
+already-shared history:
+
+```bash
+git revert -m 1 <merge-commit-sha>   # -m 1: keep the branch you merged into
+```
+
 ## Do
 
 - Write commit subjects in the imperative mood, under ~70 characters,
@@ -127,6 +211,9 @@ outside the fan-out flow):
   `fix/<slug>` depending on where the work came from.
 - Run the PR checklist above before merging a layer, not after something
   breaks downstream.
+- Tag `layer-N-done` once a layer's gate passes, and stash (`-u`) before
+  any operation that could discard uncommitted work — see "Rollback &
+  checkpoints" above.
 
 ## Don't
 
@@ -138,3 +225,6 @@ outside the fan-out flow):
   a failing hook — fix what the hook caught instead.
 - Don't merge a layer's PR with a red `lint`/`typecheck`/`test` job "to fix
   in a follow-up" — that's the exact gate `/next-layer` exists to enforce.
+- Don't `git reset --hard` without checking `git log <target>..HEAD` and
+  stashing first, and don't delete an already-merged `auto/<id>` branch —
+  `git revert` it instead (see "Rollback & checkpoints").
