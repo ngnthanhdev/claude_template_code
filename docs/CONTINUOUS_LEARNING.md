@@ -14,6 +14,28 @@ discovered in Layer 2, is just as true in Layer 9 — it belongs in
 `.learnings/`, not buried in a layer's checkpoint that nobody rereads once
 that layer is done.
 
+## `error-memory.md` vs. topic files
+
+`.learnings/` holds two different kinds of content, written by different
+things at different times:
+
+- **Topic files** (`.learnings/<topic>.md`) — free-form, one file per
+  topic, written by `/learn` between layers. Prose entries, meant to be
+  read at the start of a future layer.
+- **`.learnings/error-memory.md`** — a single, structured, chronological
+  log written by the `debugger` subagent, not `/learn`. Every entry
+  follows a fixed seven-field schema (Date · Task · Error · Root Cause ·
+  Fix · Pattern · Prevention) — see the schema documented at the top of
+  the file itself. `debugger` consults it **first** on any test/build/
+  lint/review failure (applying a matching **Pattern**'s known fix
+  directly if one exists), and **appends** a new entry once it actually
+  resolves a failure. See `.claude/agents/debugger.md`.
+
+Where a topic file is a distilled lesson ready to read, `error-memory.md`
+is the raw log that lesson gets distilled *from* — `/learn` mines it for
+recurring **Pattern**s (see below) rather than it being consumed directly
+during a future layer.
+
 ## The `/learn` command
 
 Run `/learn` between layers (see `docs/WORKFLOW.md`'s "between layers" step),
@@ -30,6 +52,12 @@ surfaced — and extracts:
   canonical one in `mobile-animations`.
 - **Recurring review findings** — anything `code-reviewer` or `debugger`
   flagged that's likely to come up again in a future layer.
+- **Recurring error-memory Patterns** — any `.learnings/error-memory.md`
+  entry whose **Pattern** has shown up more than once (or is judged likely
+  to recur in future layers) gets promoted into the owning skill's
+  gotchas (e.g. `mobile-animations`' "Setup gotchas," or the closest
+  equivalent section in the relevant `.claude/skills/<skill>/SKILL.md`) —
+  not left buried in the chronological log for someone to rediscover.
 
 ## Learning file format
 

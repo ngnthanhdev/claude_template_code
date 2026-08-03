@@ -134,7 +134,9 @@ claude_template_code/
 ├── tasks/
 │   ├── layer-0-todo.md  layer-refinement-todo.md  done.md
 │
-├── .learnings/.gitkeep
+├── .learnings/
+│   ├── .gitkeep
+│   └── error-memory.md           # structured failure log — debugger consults/records it
 │
 ├── apps/
 │   ├── mobile/.gitkeep           # Expo app — scaffolded in Layer 0

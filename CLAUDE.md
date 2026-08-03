@@ -95,7 +95,7 @@ claude_template_code/
 │   └── phases/phase-0.md
 ├── tasks/
 │   ├── layer-0-todo.md  layer-refinement-todo.md  done.md
-├── .learnings/
+├── .learnings/                   # error-memory.md (structured) + free-form topic files
 ├── apps/
 │   ├── mobile/                   # Expo app — scaffolded in Layer 0
 │   └── api/                      # NestJS app — scaffolded in Layer 0

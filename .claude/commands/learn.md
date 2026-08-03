@@ -21,3 +21,23 @@ is read at the start of future layers, not as a full retrospective.
 
 Do not duplicate what's already in `.learnings/`; if a topic file exists,
 append a new dated entry rather than rewriting it.
+
+## Promote recurring error-memory Patterns
+
+Read `.learnings/error-memory.md` (see `docs/CONTINUOUS_LEARNING.md` for
+how it differs from a topic file) and look for any **Pattern** that
+recurred — matches another entry, or was applied more than once by
+`debugger`'s consult-first step. For each one:
+
+1. Identify the owning skill — the `.claude/skills/<skill>/SKILL.md` whose
+   domain the pattern belongs to (e.g. a Reanimated worklet trap belongs to
+   `mobile-animations`, a Prisma migration surprise to `database-orm`).
+2. Promote it into that skill's gotchas section (or the closest equivalent
+   — e.g. `mobile-animations`' "Setup gotchas" — creating a short one if
+   the skill has none) as a concise, reusable lesson, not a copy-paste of
+   the raw entry.
+3. Leave the original `error-memory.md` entry in place — it's an
+   append-only chronological log, not something this step deletes from.
+
+Skip this step if no `error-memory.md` entry recurred since the last time
+`/learn` ran.
