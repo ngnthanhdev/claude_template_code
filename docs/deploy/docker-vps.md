@@ -22,24 +22,29 @@ Registry is the path of least setup since you're already on GitHub
 Actions):
 
 ```bash
-# in api-deploy.yml, after the existing image step:
-docker tag api:${{ github.sha }} ghcr.io/<org>/api:${{ github.sha }}
-docker tag api:${{ github.sha }} ghcr.io/<org>/api:latest
+# in api-deploy.yml, after the existing image step — replace `org` below
+# with your GitHub org/user (unquoted `<org>` would be read as shell
+# redirection, not a placeholder, so this uses a substituted variable
+# instead):
+org=your-gh-org
+docker tag api:${{ github.sha }} "ghcr.io/$org/api:${{ github.sha }}"
+docker tag api:${{ github.sha }} "ghcr.io/$org/api:latest"
 echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-docker push ghcr.io/<org>/api:${{ github.sha }}
-docker push ghcr.io/<org>/api:latest
+docker push "ghcr.io/$org/api:${{ github.sha }}"
+docker push "ghcr.io/$org/api:latest"
 ```
 
 Then, on the VPS (SSH manually the first time; scripted via SSH in CI for
 repeat deploys):
 
 ```bash
-docker pull ghcr.io/<org>/api:latest
+org=your-gh-org   # same value used when pushing the image above
+docker pull "ghcr.io/$org/api:latest"
 docker stop api || true && docker rm api || true
 docker run -d --name api --restart unless-stopped \
   --env-file /etc/api/.env \
   -p 127.0.0.1:3000:3000 \
-  ghcr.io/<org>/api:latest
+  "ghcr.io/$org/api:latest"
 ```
 
 Bind to `127.0.0.1` and put a reverse proxy (Caddy, Nginx, or Traefik) in

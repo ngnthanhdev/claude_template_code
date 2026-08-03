@@ -169,28 +169,31 @@ depend on.
 ### Revert a whole layer
 
 A layer turned out fundamentally wrong and you want to go back to the last
-known-good checkpoint:
+known-good checkpoint — the previous layer's tag (if this layer tagged
+`layer-3-done`, the checkpoint to go back to is `layer-2-done`):
 
 ```bash
-git reset --hard layer-(N-1)-done
+git reset --hard layer-2-done
 ```
 
-This throws away every commit made since the previous layer's checkpoint —
-confirm `git log layer-(N-1)-done..HEAD --oneline` shows only work you
-actually intend to lose before running it, and stash anything uncommitted
-first (see above). Prefer a range `git revert` over `reset --hard` if the
-layer's commits have already been pushed and someone else may have pulled
-them.
+This throws away every commit made since that checkpoint — confirm
+`git log layer-2-done..HEAD --oneline` shows only work you actually intend
+to lose before running it, and stash anything uncommitted first (see
+above). Prefer a range `git revert` over `reset --hard` if the layer's
+commits have already been pushed and someone else may have pulled them.
 
 ### Abandon or revert an autonomous-runner branch
 
 The task board (`tools/board/`) runs each autonomous task in its own
 worktree/branch — `.board-worktrees/<id>` on branch `auto/<id>` (see
-`tools/board/README.md`). To abandon a run that hasn't merged anywhere:
+`tools/board/README.md`). To abandon a run that hasn't merged anywhere,
+substitute the task's id for `$id` (unquoted `<`/`>` are shell redirection
+operators, so don't paste the angle-bracket form directly):
 
 ```bash
-git worktree remove .board-worktrees/<id> --force
-git branch -D auto/<id>
+id=a1b2c3
+git worktree remove ".board-worktrees/$id" --force
+git branch -D "auto/$id"
 ```
 
 To undo a run whose `auto/<id>` branch was **already merged** into the
@@ -199,7 +202,7 @@ individual commits it brought in) instead, the same as any other
 already-shared history:
 
 ```bash
-git revert -m 1 <merge-commit-sha>   # -m 1: keep the branch you merged into
+git revert -m 1 abc1234   # abc1234 = the merge commit; -m 1 keeps the branch you merged into
 ```
 
 ## Do
