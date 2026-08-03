@@ -27,6 +27,40 @@ Native Reanimated v4 — the mobile foundation and an authored animation skill b
 `docs/specs/` and approved by you. A fresh clone has an empty `docs/specs/`, which is exactly what
 triggers Phase 0 automatically the moment you open the repo in Claude Code.
 
+## Features
+
+Everything in the box, at a glance. Each item is detailed in the linked doc or the sections below.
+
+**Disciplined workflow engine**
+- **Phase 0 brainstorming** (🔒 HARD GATE) — no code before an approved design lands in `docs/specs/`.
+- **Constitution** (`docs/CONSTITUTION.md`) — versioned, first‑class governing principles; the repo's highest authority, cited by specs/plans/reviews.
+- **Dependency‑layered delivery** — work ships in ordered layers (`tasks/layer-*.md`); no layer advances until its tests pass.
+- **`/analyze` consistency gate** — cross‑checks spec ↔ scope ↔ tasks + constitution compliance before implementation.
+- **Checkpoints & context compaction** (`/checkpoint` → `CHECKPOINT.md`) — keep long multi‑layer runs cheap.
+- **Continuous learning** — `.learnings/` topic files + a structured `error-memory.md` the `debugger` consults/records; `/learn` distills recurring patterns into skills.
+- **Rollback playbook** — `layer-N-done` checkpoint tags + safe task/layer revert procedures.
+
+**Native Claude Code engine**
+- **27 skills** (authored + 5 vendored), **6 subagents**, **14 slash commands**, **hooks** (block heavy builds, auto‑format, commit reminder, runner no‑egress), committed `settings.json`.
+- Worktree‑isolated parallel `task-implementer`s → two‑stage review (`code-reviewer` + `security-reviewer`) → `test-writer`; plus a `debugger` subagent.
+
+**Full‑stack monorepo** — pnpm workspaces + Turborepo, TypeScript strict throughout.
+- **Mobile** — Expo + Expo Router + NativeWind + **Reanimated 4** (New Architecture) + Gesture Handler + Skia + FlashList + `expo-image`.
+- **Backend** — **NestJS** (Fastify adapter) + **Prisma** + `nestjs-zod`.
+- **Shared** — `packages/shared` zod contracts as the single source of truth for both apps.
+
+**Beautiful animations** — a Reanimated v4 recipe library (scroll‑driven 3D cards, swipe‑to‑island morph, gestures, carousel, Skia effects) gated by `motion-design-principles` (when to animate, Reduce‑Motion aware).
+
+**Security** — `security-review` / `security-threat-model` / `expo-security` skills + `backend-auth-security` (BOLA/IDOR, mass‑assignment); `/security-review` & `/threat-model` commands; a `security-reviewer` pass in the layer loop; `docs/SECURITY.md` (OWASP **ASVS**/**MASVS** + tool matrix); CI `security.yml` (Gitleaks + Semgrep + `pnpm audit`) + Dependabot.
+
+**Realtime task board** (`tools/board/`, `pnpm board`) — a kanban over `tasks/*.md`, live over WebSocket, two‑way (drag a card into **Ready** → `/run-task` drains it), multi‑project (auto free‑port + project name). **Optional autonomous runner** (`pnpm board:auto`, **off by default**) — a dragged card is implemented by a headless `claude` run in an isolated worktree → **review** (never auto‑push/merge), with an on/off toggle + an enforced no‑egress hook + per‑task timeout.
+
+**CI/CD & DevOps** — 5 GitHub Actions (quality gate · security · EAS preview/production · API deploy) + Dependabot; `docs/deploy/` provider playbooks (Railway/Render/Fly/Docker‑VPS/generic) + `environments.md`; EAS pipeline for the mobile app.
+
+**Codebase intelligence** — `graphify` knowledge graph (`/graph`) for architecture/dependency queries.
+
+**One‑command bootstrap** — `scripts/start-project.*` seeds a new project (name + brief/spec) and hands off to Phase 0.
+
 ## Requirements
 
 - [Claude Code](https://docs.claude.com/claude-code) — CLI, desktop app, web (claude.ai/code), or IDE extension. This is the engine that runs the template's workflow (skills, subagents, slash commands, hooks); it's a build/assist dependency, not a runtime one — the Expo app and NestJS API you produce run without it.
