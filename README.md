@@ -128,6 +128,7 @@ claude_template_code/
 │   ├── WORKFLOW.md  CI_CD.md  CONTINUOUS_LEARNING.md  GRAPH.md
 │   ├── SECURITY.md               # ASVS/MASVS standards, tool matrix, workflow
 │   ├── EXTERNAL_SKILLS.md        # provenance/version/license of vendored skills
+│   ├── deploy/                   # NestJS API deploy playbooks (README, environments, per-provider)
 │   ├── specs/                    # design docs land here (empty until Phase 0 runs)
 │   └── phases/phase-0.md
 │

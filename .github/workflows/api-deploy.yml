@@ -1,7 +1,8 @@
 # Builds the API's Docker image and deploys it. The deploy step is
-# intentionally left as a provider-agnostic placeholder below — plug in your
-# host's CLI/action (Fly.io, Render, Railway, AWS ECS, etc.) once one is
-# chosen; see docs/CI_CD.md.
+# intentionally left as a provider-agnostic placeholder below — pick a host
+# from docs/deploy/ (railway.md, render.md, fly.md, docker-vps.md, or
+# generic.md for anything else) and replace it with that playbook's Deploy
+# step; see docs/CI_CD.md and docs/deploy/README.md.
 name: API Deploy
 on:
   push: { branches: [main] }
@@ -13,9 +14,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build API image
         run: docker build -t api:${{ github.sha }} apps/api
-      # TODO: add your host's deploy step
-      # Examples:
-      #   - Fly.io:  flyctl deploy --config apps/api/fly.toml
-      #   - Render:  trigger the Render deploy hook or use the Render GitHub Action
-      #   - Railway: railway up --service api
-      #   - AWS ECS: push the image to ECR, then update the task definition/service
+      # TODO: replace this step with your chosen host's deploy step — see docs/deploy/
+      # Full steps live in the matching docs/deploy/<provider>.md:
+      #   - Railway:    docs/deploy/railway.md    (railway up --service api --ci)
+      #   - Render:     docs/deploy/render.md     (curl -X POST "$RENDER_DEPLOY_HOOK_URL")
+      #   - Fly.io:     docs/deploy/fly.md        (flyctl deploy --config apps/api/fly.toml)
+      #   - Docker/VPS: docs/deploy/docker-vps.md (push image + SSH deploy)
+      #   - Other host: docs/deploy/generic.md    (the pattern for any Docker-image host)

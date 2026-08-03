@@ -59,9 +59,17 @@ This template doesn't pick a hosting provider for the API. `api-deploy.yml`
 builds the Docker image and then stops at a single, explicit marker comment
 naming the one step left for you to fill in: your host's deploy command.
 
+**`docs/deploy/`** is the library of concrete playbooks that fill this
+placeholder — start at `docs/deploy/README.md` to pick a provider (Railway,
+Render, Fly.io, Docker+VPS, or the generic pattern for anything else), then
+copy that playbook's Deploy step into the marker below.
+`docs/deploy/environments.md` covers what's true regardless of provider:
+dev/staging/production, env var management, and the promotion flow.
+
 This is the only unfinished placeholder shipped anywhere in the template —
 everything else ships as complete, working content. When you've picked a
 host — Fly.io, Render, Railway, AWS ECS, or anything else that takes a built
 Docker image — replace that marker line with the provider's deploy
-step/action. Until then, the workflow builds the image (so you get an early
-signal if the Dockerfile itself is broken) without assuming a host.
+step/action (see `docs/deploy/`). Until then, the workflow builds the image
+(so you get an early signal if the Dockerfile itself is broken) without
+assuming a host.
