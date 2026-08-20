@@ -1,0 +1,96 @@
+<svg width="1280" height="640" viewBox="0 0 1280 640" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0d1117"/>
+      <stop offset="100%" stop-color="#161b2e"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#d97757"/>
+      <stop offset="100%" stop-color="#e8a87c"/>
+    </linearGradient>
+  </defs>
+
+  <!-- background -->
+  <rect width="1280" height="640" fill="url(#bg)"/>
+
+  <!-- subtle grid -->
+  <g stroke="#ffffff" stroke-opacity="0.03">
+    <path d="M0 160 H1280 M0 320 H1280 M0 480 H1280"/>
+    <path d="M320 0 V640 M640 0 V640 M960 0 V640"/>
+  </g>
+
+  <!-- top accent bar -->
+  <rect x="0" y="0" width="1280" height="6" fill="url(#accent)"/>
+
+  <!-- terminal chip -->
+  <g transform="translate(80,70)">
+    <rect width="340" height="44" rx="10" fill="#1c2333" stroke="#2d3748"/>
+    <circle cx="24" cy="22" r="6" fill="#ff5f57"/>
+    <circle cx="44" cy="22" r="6" fill="#febc2e"/>
+    <circle cx="64" cy="22" r="6" fill="#28c840"/>
+    <text x="88" y="29" font-family="SF Mono, Menlo, monospace" font-size="18" fill="#7ee787">$ claude</text>
+    <text x="180" y="29" font-family="SF Mono, Menlo, monospace" font-size="18" fill="#8b949e">→ /phase-0</text>
+  </g>
+
+  <!-- title -->
+  <text x="80" y="205" font-family="-apple-system, 'SF Pro Display', Helvetica, Arial, sans-serif" font-size="64" font-weight="800" fill="#f0f6fc">Claude Code Full-Stack</text>
+  <text x="80" y="280" font-family="-apple-system, 'SF Pro Display', Helvetica, Arial, sans-serif" font-size="64" font-weight="800" fill="#f0f6fc">Template</text>
+
+  <!-- tagline -->
+  <text x="80" y="336" font-family="-apple-system, 'SF Pro Text', Helvetica, Arial, sans-serif" font-size="27" fill="#9aa4b2">Expo + NestJS, built by an AI workflow engine — spec-gated,</text>
+  <text x="80" y="372" font-family="-apple-system, 'SF Pro Text', Helvetica, Arial, sans-serif" font-size="27" fill="#9aa4b2">layer-by-layer, token-disciplined.</text>
+
+  <!-- workflow pipeline -->
+  <g transform="translate(80,425)" font-family="SF Mono, Menlo, monospace" font-size="19" font-weight="600">
+    <rect x="0" y="0" width="132" height="46" rx="23" fill="#d97757" fill-opacity="0.16" stroke="#d97757"/>
+    <text x="66" y="29" text-anchor="middle" fill="#e8a87c">SPEC 🔒</text>
+    <text x="146" y="30" fill="#4a5568">→</text>
+
+    <rect x="172" y="0" width="132" height="46" rx="23" fill="#58a6ff" fill-opacity="0.12" stroke="#58a6ff"/>
+    <text x="238" y="29" text-anchor="middle" fill="#79b8ff">LAYERS</text>
+    <text x="318" y="30" fill="#4a5568">→</text>
+
+    <rect x="344" y="0" width="152" height="46" rx="23" fill="#7ee787" fill-opacity="0.12" stroke="#56d364"/>
+    <text x="420" y="29" text-anchor="middle" fill="#7ee787">IMPLEMENT</text>
+    <text x="510" y="30" fill="#4a5568">→</text>
+
+    <rect x="536" y="0" width="132" height="46" rx="23" fill="#d2a8ff" fill-opacity="0.12" stroke="#bc8cff"/>
+    <text x="602" y="29" text-anchor="middle" fill="#d2a8ff">REVIEW</text>
+    <text x="682" y="30" fill="#4a5568">→</text>
+
+    <rect x="708" y="0" width="112" height="46" rx="23" fill="#ffd33d" fill-opacity="0.10" stroke="#d4a72c"/>
+    <text x="764" y="29" text-anchor="middle" fill="#e3b341">SHIP</text>
+  </g>
+
+  <!-- feature bullets -->
+  <g transform="translate(80,530)" font-family="-apple-system, 'SF Pro Text', Helvetica, Arial, sans-serif" font-size="21" fill="#8b949e">
+    <text y="0">⚡ 14 skills · 5 subagents · 11 commands · hooks</text>
+    <text y="38">📋 Realtime kanban board  ·  🔒 No code before an approved spec</text>
+  </g>
+
+  <!-- right-side stack panel -->
+  <g transform="translate(950,120)">
+    <rect x="0" y="0" width="250" height="400" rx="16" fill="#1c2333" stroke="#2d3748"/>
+    <text x="125" y="46" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="17" font-weight="700" fill="#6e7681" letter-spacing="3">STACK</text>
+
+    <g font-family="-apple-system, Helvetica, sans-serif" font-size="21" font-weight="600">
+      <rect x="25" y="70" width="200" height="48" rx="10" fill="#0d1117" stroke="#2d3748"/>
+      <text x="125" y="101" text-anchor="middle" fill="#79b8ff">Expo · RN</text>
+
+      <rect x="25" y="132" width="200" height="48" rx="10" fill="#0d1117" stroke="#2d3748"/>
+      <text x="125" y="163" text-anchor="middle" fill="#ff7b72">Reanimated 4</text>
+
+      <rect x="25" y="194" width="200" height="48" rx="10" fill="#0d1117" stroke="#2d3748"/>
+      <text x="125" y="225" text-anchor="middle" fill="#e3536c">NestJS · Fastify</text>
+
+      <rect x="25" y="256" width="200" height="48" rx="10" fill="#0d1117" stroke="#2d3748"/>
+      <text x="125" y="287" text-anchor="middle" fill="#7ee787">Prisma · zod</text>
+
+      <rect x="25" y="318" width="200" height="48" rx="10" fill="#0d1117" stroke="#2d3748"/>
+      <text x="125" y="349" text-anchor="middle" fill="#d2a8ff">pnpm · Turbo</text>
+    </g>
+  </g>
+
+  <!-- bottom-right repo handle -->
+  <text x="1200" y="600" text-anchor="end" font-family="SF Mono, Menlo, monospace" font-size="19" fill="#6e7681">github.com/ngnthanhdev/claude_template_code</text>
+</svg>
