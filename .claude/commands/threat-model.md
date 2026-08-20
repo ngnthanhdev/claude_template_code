@@ -6,7 +6,7 @@ allowed-tools: Read, Grep, Glob
 
 Feature to threat-model: $ARGUMENTS
 
-Run the `security-threat-model` skill against this feature **before** any
+Run the `security` skill (`references/threat-model.md`) against this feature **before** any
 code for it is written:
 
 1. Identify every element the feature touches (new endpoint, new mobile

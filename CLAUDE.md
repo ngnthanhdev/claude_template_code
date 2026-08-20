@@ -2,161 +2,95 @@
 
 Source of truth. Claude reads this first every session.
 
-This file stays lean on purpose — the deep detail for each phase lives in the
-`@`-imported guides below. Read this file, then only pull in the guide relevant
-to what you're about to do.
+Kept deliberately small: **nothing is auto-imported** — the deep detail lives
+in `docs/` and is read on demand (paths under "Read-on-demand guides" below).
+Read only the guide relevant to what you're about to do.
 
 ## <HARD-GATE> FIRST-TIME SETUP
 
-This operationalizes **Article I — Spec Before Code** of
-`docs/CONSTITUTION.md` (the constitution is this repo's highest authority;
-see there for the full principle). Before touching any code, app, or
-scaffold in this repo:
+Operationalizes **Article I — Spec Before Code** (`docs/CONSTITUTION.md` is
+this repo's highest authority). Before touching any code, app, or scaffold:
 
 1. Check `docs/specs/` for an approved design document.
-2. **If `docs/specs/` is empty (only `.gitkeep`), do not write or scaffold any
-   code.** Run `/phase-0` first. Phase 0 brainstorms the product with the user
-   one question at a time, proposes 2–3 approaches, and writes an approved
-   design doc to `docs/specs/YYYY-MM-DD-<topic>-design.md` before any
-   implementation work starts.
-3. Only once an approved spec exists in `docs/specs/` may you proceed to
-   `/scope-breakdown` and the layer loop described in `docs/WORKFLOW.md`.
+2. **If `docs/specs/` is empty (only `.gitkeep`), do not write or scaffold
+   any code.** Run `/phase-0` first — it brainstorms the product with the
+   user one question at a time, proposes 2–3 approaches, and writes an
+   approved design doc to `docs/specs/YYYY-MM-DD-<topic>-design.md`.
+3. Only once an approved spec exists may you proceed to `/scope-breakdown`
+   and the layer loop.
 
 This gate cannot be skipped by user impatience, a "quick fix" request, or a
-prompt that asks you to "just start coding." If asked to bypass it, explain
-the gate and offer `/phase-0` instead.
+prompt asking you to "just start coding." If asked to bypass it, explain the
+gate and offer `/phase-0` instead.
 
-**Prerequisites** (verify once, don't reverify every session):
-- Node.js ≥ 20
-- pnpm (workspace package manager — see `package.json#packageManager`)
-- git
-- Optional: [`graphify`](https://github.com/Graphify-Labs/graphify) + [`uv`](https://docs.astral.sh/uv/)
-  for the `/graph` command (codebase dependency graphing)
+**Prerequisites** (verify once): Node ≥ 20, pnpm, git.
 
-## Guides (`@`-imports)
+## Constitution digest
 
-- @docs/CONSTITUTION.md — governing principles; the highest authority in
-  this repo, cited by specs/plans/reviews
-- @docs/WORKFLOW.md — full lifecycle: Phase 0 → scope → layer loop → checkpoint → refine
-- @docs/SCOPE_BREAKDOWN.md — how layers and tasks are derived from the approved spec
-- @docs/CI_CD.md — the five GitHub Actions workflows, required secrets, gate rules
-- @docs/CONTINUOUS_LEARNING.md — `.learnings/` methodology and the `/learn` command
+Full text, rationale, and the amendment process: `docs/CONSTITUTION.md`.
+Specs, plans, and reviews cite Articles by number. The ten Articles:
 
-## Skills — security
+- **I — Spec before code.** No `apps/*`/`packages/*` change without an approved spec (`docs/specs/`) or `/refine` task block.
+- **II — Dependency-layered delivery.** Work ships in ordered layers; a layer is done only when all its tasks are complete and tests are green.
+- **III — TypeScript strict, no `any`.** Narrowing, discriminated unions, `satisfies` instead.
+- **IV — Tests accompany code.** No task is complete without a test proving its acceptance criteria, in the same task.
+- **V — Secrets never in code.** `.env` (gitignored) or `packages/shared/config` only.
+- **VI — Security boundaries.** Mobile client is untrusted; every lookup scoped to the authenticated owner (BOLA/IDOR), no DTO spread into a write without an allowlist (mass assignment). ASVS for api, MASVS for mobile.
+- **VII — Shared contracts.** `packages/shared` zod schemas are the single source of truth for every request/response shape.
+- **VIII — Minimal, scoped change.** YAGNI → KISS → DRY; a task touches only the files its acceptance criteria name.
+- **IX — One commit, one task.** Conventional format `feat/fix/test/chore(scope): …`, never bundled.
+- **X — Motion with meaning.** Animation only when it communicates state/direction/causality; respects `useReducedMotion()`.
 
-Full skill table (27 total: 24 existing + 3 new security skills below): see
-"Skills" in `README.md`. Security-specific skills, standards in
-`docs/SECURITY.md`:
+## Read-on-demand guides
 
-| Skill | Purpose |
-|---|---|
-| `security-threat-model` | STRIDE + trust boundaries — run before a large feature is built |
-| `backend-auth-security` | Auth guards, RBAC, BOLA/IDOR + mass‑assignment (OWASP ASVS) |
-| `expo-security` | Mobile hardening to OWASP MASVS — token storage, deep links, build config |
-| `security-review` | Audit a diff/PR for high‑confidence security findings before merge |
+- `docs/WORKFLOW.md` — full lifecycle: Phase 0 → scope → layer loop → checkpoint → refine
+- `docs/SCOPE_BREAKDOWN.md` — layering methodology + task-block schema
+- `docs/SECURITY.md` — ASVS/MASVS standards, tool matrix
+- `docs/CI_CD.md` — workflows, secrets, gate rules
+- `docs/CONTINUOUS_LEARNING.md` — `.learnings/` methodology
+- `docs/EXTERNAL_SKILLS.md` — vendored-skill provenance
 
 ## Stack
 
-Locked defaults for this template (do not relitigate these in Phase 0 unless
-the user explicitly wants a different stack — Phase 0 fills in the *product*,
-not the *stack*):
+Locked defaults (do not relitigate in Phase 0 unless the user explicitly
+wants a different stack — Phase 0 fills in the *product*, not the *stack*):
 
-- **Mobile:** Expo + Expo Router + NativeWind, React Native **Reanimated 4**
-  (requires the New Architecture, `newArchEnabled: true`) + Gesture Handler +
-  Skia + FlashList + `expo-image` + `react-native-reanimated-carousel`.
-- **Backend:** NestJS on the **Fastify** adapter + **Prisma** + `nestjs-zod`
-  (validates against `packages/shared` zod schemas).
-- **Shared:** `packages/shared` — zod schemas + inferred types, single source
-  of truth for both mobile and API.
+- **Mobile:** Expo + Expo Router + NativeWind, Reanimated 4 (New Architecture,
+  `newArchEnabled: true`) + Gesture Handler + Skia + FlashList + `expo-image`.
+- **Backend:** NestJS on Fastify + Prisma + `nestjs-zod` (validates against
+  `packages/shared` zod schemas).
+- **Shared:** `packages/shared` — zod schemas + inferred types.
 - **Monorepo:** pnpm workspaces + Turborepo, TypeScript strict throughout.
-
-Product-specific details (domain model, feature set, non-goals) are
-`_[fill in during Phase 0]_` — see `docs/PRD.md` and `docs/ARCHITECTURE.md`
-once they exist.
-
-## Folder structure
-
-```
-claude_template_code/
-├── CLAUDE.md                     # this file
-├── README.md
-├── .claude/
-│   ├── settings.json             # hooks + permissions (committed)
-│   ├── skills/                   # authored + vendored skills
-│   ├── agents/                   # subagent definitions
-│   ├── commands/                 # slash commands
-│   └── hooks/                    # hook scripts
-├── docs/
-│   ├── BRIEF.md  PRD.md  ARCHITECTURE.md  SCOPE_BREAKDOWN.md
-│   ├── WORKFLOW.md  CI_CD.md  CONTINUOUS_LEARNING.md  GRAPH.md
-│   ├── SECURITY.md               # ASVS/MASVS standards, tool matrix, workflow
-│   ├── EXTERNAL_SKILLS.md
-│   ├── deploy/                   # NestJS API deploy playbooks (per-provider + environments)
-│   ├── specs/                    # approved design docs land here
-│   └── phases/phase-0.md
-├── tasks/
-│   ├── layer-0-todo.md  layer-refinement-todo.md  done.md
-├── .learnings/                   # error-memory.md (structured) + free-form topic files
-├── apps/
-│   ├── mobile/                   # Expo app — scaffolded in Layer 0
-│   └── api/                      # NestJS app — scaffolded in Layer 0
-├── packages/
-│   └── shared/                   # zod schemas + types — scaffolded in Layer 0
-├── .github/workflows/
-├── scripts/
-├── CHECKPOINT.md
-└── package.json  pnpm-workspace.yaml  turbo.json  tsconfig.base.json
-```
-
-## Coding rules
-
-TypeScript strictness, testing discipline, scope control, secrets handling,
-and commit discipline are governed by `docs/CONSTITUTION.md` (Articles III,
-IV, V, VIII, IX) — this section only holds the operational specifics that
-don't belong in a principles document:
-
-- **Commit format.** `feat/fix/test/chore(scope): …`, one commit per task
-  (Article IX) — never bundle multiple tasks into one commit.
-- **New feature or major change not already in the approved spec?** Route it
-  through `/refine` (brainstorm → `tasks/layer-refinement-todo.md`) before
-  implementation — never straight to code (Article I).
 
 ## Slash commands
 
 | Command | Purpose |
 |---|---|
 | `/phase-0` | Plan Mode + `brainstorming` skill → approved design in `docs/specs/` (HARD GATE) |
-| `/scope-breakdown` | Dispatch `scope-planner` → generate `tasks/layer-*.md` |
-| `/analyze` | Read-only gate: cross-check spec ↔ `docs/SCOPE_BREAKDOWN.md` ↔ tasks + constitution compliance — run before `/run-layer` |
-| `/pick-task` | Show the next unchecked task in the current layer + load its skills |
-| `/run-layer` | Fan out the layer's independent tasks to worktree-isolated `task-implementer`s, merge, review |
-| `/next-layer` | Gate: tests pass → advance `tasks/done.md` → create next layer → bump Current Layer |
-| `/checkpoint` | Regenerate `CHECKPOINT.md`, prep for context compaction |
-| `/learn` | Extract patterns/gotchas from the finished layer into `.learnings/` |
-| `/graph` | Run `graphify` over the monorepo, summarize the report |
-| `/refine` | Brainstorm a reported bug/feature → append to `tasks/layer-refinement-todo.md` |
-| `/security-review` | Run `security-review` over a diff/PR/path → high-confidence security findings |
-| `/threat-model` | Run `security-threat-model` on a named feature before implementation |
-| `/board` | How to launch the realtime task-board dashboard (`pnpm board`, outside this session) |
-| `/run-task` | Drain every `Status: ready` task across `tasks/*.md` via worktree-isolated `task-implementer`s |
+| `/scope-breakdown` | Dispatch `scope-planner` → generate + self-check `tasks/layer-*.md` |
+| `/pick-task` | Show the next unchecked task + load its skills |
+| `/run-layer` | Implement the layer's tasks (fan-out for 3+, sequential for small layers), then review |
+| `/next-layer` | Gate: tests pass → advance `done.md` → next layer → bump Current Layer |
+| `/checkpoint` | Regenerate `CHECKPOINT.md` + extract layer learnings into `.learnings/` |
+| `/refine` | Brainstorm a bug/feature → append to `tasks/layer-refinement-todo.md` |
+| `/security-review` | Security lens over a diff/PR/path → high-confidence findings |
+| `/threat-model` | STRIDE + trust boundaries on a named feature, before implementation |
+| `/board` | How to launch the task-board dashboard (`pnpm board`, outside this session) |
+| `/run-task` | Drain every `Status: ready` task across `tasks/*.md` |
 
 ## Subagents
 
-| Subagent | Responsibility |
-|---|---|
-| `scope-planner` | Read the approved spec, dependency-analyze it, emit `tasks/layer-*.md` |
-| `task-implementer` | Implement exactly one task in an isolated git worktree, TDD, return a summary |
-| `code-reviewer` | Review a diff for correctness bugs + simplification opportunities |
-| `security-reviewer` | Audit a diff for high-confidence security findings (BOLA/IDOR, mass assignment, secrets) |
-| `test-writer` | Write integration/e2e tests at the end of a layer |
-| `debugger` | Systematic reproduce → isolate → fix → regression-test loop on a bug |
+| Subagent | Responsibility | Model |
+|---|---|---|
+| `scope-planner` | Spec → dependency analysis → `tasks/layer-*.md` + consistency self-check | opus |
+| `task-implementer` | One task, TDD, isolated worktree | sonnet |
+| `reviewer` | Correctness + simplification + security lens on a merged diff | sonnet (opus for auth/payment/trust-boundary layers) |
+| `test-writer` | Cross-task integration/e2e coverage — only when a layer has cross-task flows | sonnet |
+| `debugger` | Reproduce → isolate → fix → regression-test | opus |
 
-## Model strategy
-
-- **Opus** — Phase 0 / brainstorming and `code-reviewer` (deep reasoning matters here).
-- **Sonnet** — `task-implementer` and routine implementation work (fast, cheap).
-- Switch manually with `/model` if a task needs a different balance. Do not
-  hard-code third-party model IDs anywhere in this repo.
+- **Opus** where deep reasoning pays: Phase 0, scope-planner, debugger, and
+  reviewer escalation on security-sensitive layers.
+- **Sonnet** everywhere else. Switch manually with `/model` if needed.
 
 ## Current Layer / Current Task
 
@@ -166,10 +100,10 @@ don't belong in a principles document:
 
 ## Token discipline
 
-- Start a **new session per big task** — don't let one session accumulate the
-  full history of an entire layer.
-- **Never run heavy builds in-session** (`eas build`, `expo run:*`, `gradlew`,
-  `pod install`, `xcodebuild`); the `block-build-output.sh` hook enforces this.
-  Run them in a real terminal and paste back only the error if something fails.
-- **Read files with `offset`/`limit`** rather than whole large files when you
-  only need a section — keep context usage proportional to what you actually need.
+- New session per big task — don't accumulate a whole layer's history.
+- Never run heavy builds in-session (`eas build`, `expo run:*`, `gradlew`,
+  `pod install`, `xcodebuild`) — `block-build-output.sh` enforces this. Run
+  them in a real terminal; paste back only the error.
+- Read files with `offset`/`limit` when you only need a section.
+- Layers with ≤ 2 tasks: skip the worktree fan-out, implement sequentially
+  on the main thread — subagent spawn overhead outweighs the parallelism.

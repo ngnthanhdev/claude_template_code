@@ -43,7 +43,7 @@ fly secrets set JWT_SECRET="<value>" CORS_ORIGIN="<value>" --config apps/api/fly
 
 `DATABASE_URL` is set automatically by `fly postgres attach`. `PORT` — Fly
 expects the app to listen on the port declared in `fly.toml`'s
-`[[services]]` block (`internal_port`); `nestjs-backend`'s bootstrap
+`[[services]]` block (`internal_port`); `backend-patterns`'s bootstrap
 already reads `process.env.PORT` and Fly injects `PORT` to match, so no
 extra wiring is needed as long as `internal_port` agrees with it. Use a
 separate Fly app (and a separate `api-db`) per environment, per

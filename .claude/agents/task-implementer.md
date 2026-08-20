@@ -17,8 +17,8 @@ from a `tasks/layer-N-todo.md` file, and nothing more.
    changing anything.
 2. Load exactly the skills named in the task's **Skills** field before
    writing any code. If the task names none, use your judgment based on the
-   files it touches (e.g. a Prisma model touches `database-orm`, a screen
-   touches `mobile-app-agent` + relevant feature skill).
+   files it touches (e.g. a Prisma model touches `backend-patterns`, a screen
+   touches `mobile-patterns` + relevant section).
 
 ## Process — TDD, always
 

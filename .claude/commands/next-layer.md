@@ -2,12 +2,14 @@
 description: Gate the current layer on all tests passing, then advance tasks/done.md, create the next layer file, and bump Current Layer in CLAUDE.md.
 ---
 
-1. **Gate: verify tests pass.** Dispatch `test-writer` (if it hasn't already
-   run for this layer) to add the integration/e2e coverage the layer needs,
-   then confirm the full test suite for every package touched by this layer
-   is green. If anything is red or missing, **stop here** — do not advance.
-   Report what's failing and suggest looping back into `/run-layer` or
-   `/refine` a fix.
+1. **Gate: verify tests pass.** If the layer has cross-task flows (an
+   endpoint a screen calls, a schema both sides share, a release-relevant
+   journey), dispatch `test-writer` to cover those seams — skip it for
+   layers whose tasks are independent (task-level tests already exist per
+   Article IV). Then confirm the full test suite for every package touched
+   by this layer is green. If anything is red or missing, **stop here** —
+   do not advance. Report what's failing and suggest looping back into
+   `/run-layer` or `/refine` a fix.
 2. **Tag the checkpoint.** Once the gate passes, stamp
    `git tag layer-N-done` (N = the layer that just finished). This is the
    rollback point the "Rollback & checkpoints" section of
@@ -22,5 +24,6 @@ description: Gate the current layer on all tests passing, then advance tasks/don
    context for dependency analysis.
 5. **Bump `CLAUDE.md`.** Update the "Current Layer" / "Current Task"
    section to point at the new layer and its first unchecked task.
-6. Suggest `/checkpoint` next, so the layer's decisions and API contracts
-   are captured before context grows further.
+6. Suggest `/checkpoint` next — it captures the layer's decisions and API
+   contracts AND extracts durable learnings into `.learnings/` in the same
+   pass, before context grows further.

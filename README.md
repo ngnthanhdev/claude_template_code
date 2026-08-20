@@ -15,6 +15,12 @@ It is **native‑first**: instead of simulating the workflow with plain markdown
 uses Claude Code's own primitives — skills, subagents, slash commands, hooks, `settings.json`, and
 Plan Mode — as the actual workflow engine.
 
+It is also **token‑disciplined by design**: `CLAUDE.md` keeps the always‑loaded context to about
+a hundred lines (everything else is read on demand), skills are consolidated per domain with
+progressive‑disclosure `references/` (only the file matching the task is read), one reviewer pass
+covers correctness + simplification + security, and small layers skip the subagent fan‑out
+entirely.
+
 `apps/mobile`, `apps/api`, and `packages/shared` ship **empty** (only a `.gitkeep` each). They are
 scaffolded for real during your project's own **Layer 0**, once your design spec is approved — this
 template only provides the monorepo configuration around them.
@@ -33,31 +39,29 @@ Everything in the box, at a glance. Each item is detailed in the linked doc or t
 
 **Disciplined workflow engine**
 - **Phase 0 brainstorming** (🔒 HARD GATE) — no code before an approved design lands in `docs/specs/`.
-- **Constitution** (`docs/CONSTITUTION.md`) — versioned, first‑class governing principles; the repo's highest authority, cited by specs/plans/reviews.
+- **Constitution** (`docs/CONSTITUTION.md`) — versioned, first‑class governing principles; the repo's highest authority, cited by specs/plans/reviews. A 10‑bullet digest lives in `CLAUDE.md`; the full text is read on demand.
 - **Dependency‑layered delivery** — work ships in ordered layers (`tasks/layer-*.md`); no layer advances until its tests pass.
-- **`/analyze` consistency gate** — cross‑checks spec ↔ scope ↔ tasks + constitution compliance before implementation.
-- **Checkpoints & context compaction** (`/checkpoint` → `CHECKPOINT.md`) — keep long multi‑layer runs cheap.
-- **Continuous learning** — `.learnings/` topic files + a structured `error-memory.md` the `debugger` consults/records; `/learn` distills recurring patterns into skills.
+- **Built‑in consistency self‑check** — `scope-planner` cross‑checks spec ↔ scope ↔ tasks + constitution compliance before returning each layer file.
+- **Checkpoints + learning in one pass** (`/checkpoint`) — regenerates `CHECKPOINT.md` **and** extracts durable gotchas into `.learnings/` (with a structured `error-memory.md` the `debugger` consults/records).
 - **Rollback playbook** — `layer-N-done` checkpoint tags + safe task/layer revert procedures.
 
-**Native Claude Code engine**
-- **27 skills** (authored + 5 vendored), **6 subagents**, **14 slash commands**, **hooks** (block heavy builds, auto‑format, commit reminder, runner no‑egress), committed `settings.json`.
-- Worktree‑isolated parallel `task-implementer`s → two‑stage review (`code-reviewer` + `security-reviewer`) → `test-writer`; plus a `debugger` subagent.
+**Native Claude Code engine, sized for token efficiency**
+- **14 skills** (11 authored + 3 vendored), **5 subagents**, **11 slash commands**, **hooks** (block heavy builds, auto‑format, commit reminder, runner no‑egress), committed `settings.json`.
+- Domain skills (`mobile-patterns`, `backend-patterns`, `security`, `animations`) use a short routing `SKILL.md` + on‑demand `references/` — an agent reads only the pattern file its task touches.
+- Worktree‑isolated parallel `task-implementer`s (3+ tasks; small layers run sequentially on the main thread) → a single `reviewer` pass (correctness + simplification + security lens, escalated to Opus for auth/payment layers) → `test-writer` only when a layer has cross‑task flows; plus a `debugger` subagent.
 
 **Full‑stack monorepo** — pnpm workspaces + Turborepo, TypeScript strict throughout.
 - **Mobile** — Expo + Expo Router + NativeWind + **Reanimated 4** (New Architecture) + Gesture Handler + Skia + FlashList + `expo-image`.
 - **Backend** — **NestJS** (Fastify adapter) + **Prisma** + `nestjs-zod`.
 - **Shared** — `packages/shared` zod contracts as the single source of truth for both apps.
 
-**Beautiful animations** — a Reanimated v4 recipe library (scroll‑driven 3D cards, swipe‑to‑island morph, gestures, carousel, Skia effects) gated by `motion-design-principles` (when to animate, Reduce‑Motion aware).
+**Beautiful animations** — the `animations` skill: a taste layer (when to animate, Reduce‑Motion aware) gating a Reanimated v4 recipe library (scroll‑driven 3D cards, swipe‑to‑island morph, gestures, carousel, Skia effects).
 
-**Security** — `security-review` / `security-threat-model` / `expo-security` skills + `backend-auth-security` (BOLA/IDOR, mass‑assignment); `/security-review` & `/threat-model` commands; a `security-reviewer` pass in the layer loop; `docs/SECURITY.md` (OWASP **ASVS**/**MASVS** + tool matrix); CI `security.yml` (Gitleaks + Semgrep + `pnpm audit`) + Dependabot.
+**Security** — one `security` skill (review method, STRIDE threat modeling, ASVS backend hardening, MASVS mobile hardening as on‑demand references); `/security-review` & `/threat-model` commands; the security lens built into every `reviewer` pass; `docs/SECURITY.md` (OWASP **ASVS**/**MASVS** + tool matrix); CI `security.yml` (Gitleaks + Semgrep + `pnpm audit`) + Dependabot.
 
 **Realtime task board** (`tools/board/`, `pnpm board`) — a kanban over `tasks/*.md`, live over WebSocket, two‑way (drag a card into **Ready** → `/run-task` drains it), multi‑project (auto free‑port + project name). **Optional autonomous runner** (`pnpm board:auto`, **off by default**) — a dragged card is implemented by a headless `claude` run in an isolated worktree → **review** (never auto‑push/merge), with an on/off toggle + an enforced no‑egress hook + per‑task timeout.
 
 **CI/CD & DevOps** — 5 GitHub Actions (quality gate · security · EAS preview/production · API deploy) + Dependabot; `docs/deploy/` provider playbooks (Railway/Render/Fly/Docker‑VPS/generic) + `environments.md`; EAS pipeline for the mobile app.
-
-**Codebase intelligence** — `graphify` knowledge graph (`/graph`) for architecture/dependency queries.
 
 **One‑command bootstrap** — `scripts/start-project.*` seeds a new project (name + brief/spec) and hands off to Phase 0.
 
@@ -68,8 +72,6 @@ Everything in the box, at a glance. Each item is detailed in the linked doc or t
 - pnpm (`npm install -g pnpm@9` if you don't have it)
 - git
 - For mobile development: Watchman, Xcode (iOS) and/or Android Studio (Android)
-- Optional: [`graphify`](https://github.com/Graphify-Labs/graphify) + [`uv`](https://docs.astral.sh/uv/) for the `/graph`
-  command (codebase dependency graphing)
 
 ## Quick start
 
@@ -123,11 +125,12 @@ Claude reads `CLAUDE.md` on start → Phase 0 begins in the terminal.
 1. **Phase 0 (design).** Claude brainstorms your idea **one question at a time**, proposes a few
    approaches, and writes an approved design to `docs/specs/`. 🔒 **HARD GATE** — nothing is coded
    or scaffolded until you approve.
-2. **`/scope-breakdown`** — turns the approved design into `tasks/layer-0-todo.md` (the foundation layer).
-3. **`/run-layer`** — implements the current layer with worktree‑isolated `task-implementer`
-   subagents, then `code-reviewer` + `security-reviewer`.
+2. **`/scope-breakdown`** — turns the approved design into `tasks/layer-0-todo.md` (the foundation
+   layer), self-checked for coverage/consistency/constitution compliance before it's handed back.
+3. **`/run-layer`** — implements the current layer (worktree‑isolated `task-implementer`s for 3+
+   tasks, sequential main-thread for small layers), then one `reviewer` pass.
 4. **`/next-layer`** — once the layer's tests pass, advances to the next layer. Repeat 3–4 until done.
-5. **Between layers:** `/checkpoint`, `/learn`, `/graph`.
+5. **Between layers:** `/checkpoint` (checkpoint + learnings in one pass).
 6. **Later bugs/features:** `/refine` (brainstorm → `tasks/layer-refinement-todo.md`).
 
 ### 4. (Optional) Watch progress on the task board
@@ -146,20 +149,20 @@ fine — each board auto‑picks a free port and shows its project name (see `to
 
 ```
 claude_template_code/
-├── CLAUDE.md                     # Source of truth; kept lean, @-imports sub-guides
+├── CLAUDE.md                     # Source of truth; ~100 lines, nothing auto-imported
 ├── README.md                     # Human-facing intro + how to start
 │
 ├── .claude/
 │   ├── settings.json             # hooks + permissions + env (committed)
 │   ├── settings.local.json.example
-│   ├── skills/                   # authored + vendored external skills
+│   ├── skills/                   # 11 authored + 3 vendored (domain skills: SKILL.md + references/)
 │   ├── agents/                   # subagent definitions
 │   ├── commands/                 # slash commands
 │   └── hooks/                    # hook scripts referenced by settings.json
 │
 ├── docs/
 │   ├── BRIEF.md  PRD.md  ARCHITECTURE.md  SCOPE_BREAKDOWN.md
-│   ├── WORKFLOW.md  CI_CD.md  CONTINUOUS_LEARNING.md  GRAPH.md
+│   ├── WORKFLOW.md  CI_CD.md  CONTINUOUS_LEARNING.md
 │   ├── SECURITY.md               # ASVS/MASVS standards, tool matrix, workflow
 │   ├── EXTERNAL_SKILLS.md        # provenance/version/license of vendored skills
 │   ├── deploy/                   # NestJS API deploy playbooks (README, environments, per-provider)
@@ -180,7 +183,7 @@ claude_template_code/
 │   └── shared/.gitkeep           # shared zod schemas + types + config
 │
 ├── .github/workflows/
-│   ├── ci.yml  eas-preview.yml  eas-production.yml  api-deploy.yml
+│   ├── ci.yml  security.yml  eas-preview.yml  eas-production.yml  api-deploy.yml
 │
 ├── tools/
 │   └── board/                     # realtime task-board dashboard (`pnpm board`)
@@ -198,12 +201,13 @@ claude_template_code/
 ```
 Fresh clone (no design in docs/specs/)
   → PHASE 0 (Plan Mode, HARD GATE): /phase-0 → brainstorming skill → design doc → user approve
-  → SCOPE BREAKDOWN: /scope-breakdown → scope-planner → tasks/layer-*.md
+  → SCOPE BREAKDOWN: /scope-breakdown → scope-planner → tasks/layer-*.md + built-in self-check
        (Layer 0 = scaffold Expo + API + shared + base config + CI)
   → LAYER LOOP (per layer):
-       /run-layer → task-implementer (per-task worktree) → merge → code-reviewer → test-writer
-       /next-layer  [gate: all tests pass]
-  → BETWEEN LAYERS: /checkpoint → CHECKPOINT.md (+ compact context); /learn; /graph
+       /run-layer → ≤2 tasks: sequential main thread | 3+: task-implementer fan-out → merge
+                  → reviewer (correctness + simplification + security, one pass)
+       /next-layer  [gate: all tests pass; test-writer only for cross-task flows]
+  → BETWEEN LAYERS: /checkpoint → CHECKPOINT.md + .learnings/ (+ compact context)
   → REFINEMENT: user reports bug/feature → /refine → brainstorm → layer-refinement-todo.md → implement
 ```
 
@@ -216,17 +220,14 @@ advancing to the next layer before its tests pass; (3) no hard‑coded secrets �
 | Command | What it does |
 |---|---|
 | `/phase-0` | Enter Plan Mode, run the `brainstorming` skill, write the approved design to `docs/specs/` (HARD GATE — no code first) |
-| `/scope-breakdown` | Dispatch the `scope-planner` subagent against the approved spec → create `tasks/layer-*.md` |
-| `/analyze` | Read-only gate: cross-check spec ↔ `docs/SCOPE_BREAKDOWN.md` ↔ generated tasks + constitution compliance, before `/run-layer` |
+| `/scope-breakdown` | Dispatch the `scope-planner` subagent against the approved spec → create + self-check `tasks/layer-*.md` |
 | `/pick-task` | Show the next task in the current layer and load its relevant skills |
-| `/run-layer` | Fan out independent tasks in the current layer to worktree‑isolated `task-implementer` subagents, merge, then run `code-reviewer` |
+| `/run-layer` | Implement the current layer — fan out 3+ independent tasks to worktree‑isolated `task-implementer`s (sequential for ≤2), merge, then run the `reviewer` |
 | `/next-layer` | Verify the layer's tests pass, advance `tasks/done.md`, create the next layer, bump "Current Layer" in `CLAUDE.md` |
-| `/checkpoint` | Generate `CHECKPOINT.md` (git log + `done.md` + key decisions) and compact context |
-| `/learn` | Extract patterns/gotchas from the finished layer into `.learnings/` |
-| `/graph` | Run `graphify` over the monorepo and summarize `GRAPH_REPORT.md` |
+| `/checkpoint` | Generate `CHECKPOINT.md` + extract layer learnings into `.learnings/`, then compact context |
 | `/refine` | Brainstorm a reported bug/feature, then append it to `tasks/layer-refinement-todo.md` |
-| `/security-review` | Run `security-review` over a diff/PR/path → high-confidence security findings |
-| `/threat-model` | Run `security-threat-model` on a named feature before implementation |
+| `/security-review` | Run the `security` skill over a diff/PR/path → high-confidence security findings |
+| `/threat-model` | STRIDE threat model on a named feature before implementation |
 | `/board` | How to launch the realtime task-board dashboard (`pnpm board`, runs outside this session) |
 | `/run-task` | Drain every `Status: ready` task across `tasks/*.md` via worktree‑isolated `task-implementer`s |
 
@@ -240,44 +241,38 @@ Run it with:
 pnpm board
 ```
 
-then open `http://127.0.0.1:4319`. It renders the six `Status` columns
-(Todo → Ready → In Progress → Blocked → Review → Done) as swimlanes grouped
-by layer, updating live over WebSocket whenever `tasks/*.md` changes on
-disk. Dragging a card into **Ready** is the "assign to AI" action — it
-PATCHes that task's `Status`, and `/run-task` picks up whatever's sitting in
-Ready next. The board only ever writes `Status`/`Assignee`; task content
-stays owned by Claude. It's a plain Node process — start it in its own
-terminal, not inside a Claude Code session (see `/board` and
-`tools/board/README.md`).
+then open the URL it prints (it auto-picks a free port). It renders the six
+`Status` columns (Todo → Ready → In Progress → Blocked → Review → Done) as
+swimlanes grouped by layer, updating live over WebSocket whenever
+`tasks/*.md` changes on disk. Dragging a card into **Ready** is the "assign
+to AI" action — it PATCHes that task's `Status`, and `/run-task` picks up
+whatever's sitting in Ready next. The board only ever writes
+`Status`/`Assignee`; task content stays owned by Claude. It's a plain Node
+process — start it in its own terminal, not inside a Claude Code session
+(see `/board` and `tools/board/README.md`).
 
 ## Skills
+
+Skills are consolidated per domain. The four big ones are **routing skills**:
+a short `SKILL.md` (core rules + a table of contents) plus `references/`
+files that are read only when a task actually touches that area — so loading
+a skill costs ~30 lines, not the whole domain.
 
 ### Authored
 
 | Skill | Purpose |
 |---|---|
 | `brainstorming` | Phase 0 loop: clarify → 2‑3 approaches → design doc |
-| `mobile-app-agent` | Screen composition, Expo Router navigation, device APIs, perf guardrails |
+| `mobile-patterns` | All mobile feature patterns — screens/navigation, auth + secure storage, TanStack Query API integration, forms + lists, i18n/theme (5 on-demand references) |
 | `expo-router-nativewind` | Mobile foundation: root layout, NativeWind, Reanimated setup, New Arch |
-| `mobile-auth-state` | Auth flows, secure token storage, persisted session store |
-| `mobile-api-integration` | TanStack Query + typed client consuming `@shared` zod contracts |
-| `mobile-data-forms` | `react-hook-form` + zod forms, FlashList lists, optimistic updates |
-| `mobile-i18n-theme` | i18n and light/dark theme tokens with NativeWind |
+| `animations` | Taste layer (when/why to animate, Reduce Motion) + Reanimated v4 recipe library (2 references, principles first) |
 | `mobile-testing-release` | Jest + RTL unit tests, Maestro e2e flows, release checklist |
 | `expo-eas-pipeline` | EAS build/submit/update profiles, channels, secrets |
-| `mobile-animations` | Reanimated v4 animation/gesture recipe library (the "how") |
-| `motion-design-principles` | When/why to animate vs. restrain — the taste layer |
-| `api-design` | REST resource design, pagination, error envelopes, versioning |
-| `nestjs-backend` | Modules/DI/guards/pipes, Fastify adapter, `nestjs-zod` validation |
-| `database-orm` | Prisma schema, migrations, `PrismaModule`/`PrismaService`, transactions |
-| `backend-auth-security` | Guards + Passport, RBAC, CORS/CSRF, helmet, OWASP top‑10, BOLA/IDOR + mass‑assignment (ASVS) |
-| `backend-testing` | Jest unit + Supertest integration against the Nest app |
+| `backend-patterns` | All backend patterns — NestJS modules/DI/guards, Prisma, REST design, Jest+Supertest testing (4 on-demand references) |
+| `security` | One security skill — diff review method, STRIDE threat modeling, ASVS backend hardening, MASVS mobile hardening (4 on-demand references) |
 | `shared-contracts` | `packages/shared` zod schemas as the mobile↔api single source of truth |
 | `typescript-strict` | No `any`, narrowing, discriminated unions, `satisfies` |
 | `git-workflow` | Conventional commits, branch naming, 1 commit = 1 task |
-| `security-threat-model` | STRIDE + trust boundaries before a large feature (see `docs/SECURITY.md`) |
-| `security-review` | Audit a diff/PR for high‑confidence security findings (ASVS/MASVS) |
-| `expo-security` | Mobile hardening to OWASP MASVS: token storage, deep links, WebView, build config |
 
 ### Vendored (external, license‑preserved)
 
@@ -285,9 +280,7 @@ terminal, not inside a Claude Code session (see `/board` and
 |---|---|---|
 | `react-native-best-practices` | software‑mansion‑labs/skills | Authoritative Reanimated 4, gestures, Skia, 120fps |
 | `react-native-guidelines` | vercel‑labs/agent‑skills | Perf guardrails: FlashList, memoization, expo‑image |
-| `ui-ux-pro-max` | nextlevelbuilder/ui-ux-pro-max-skill | Visual design intelligence (styles, palettes, typography) |
 | `ponytail` | DietrichGebert/ponytail | Code‑minimalism discipline (anti over‑engineering) |
-| `graphify` | Graphify-Labs/graphify | Codebase knowledge graph — powers `/graph` (needs the `graphifyy` CLI) |
 
 See `docs/EXTERNAL_SKILLS.md` for pinned commits, licenses, and re‑sync commands.
 
@@ -295,11 +288,10 @@ See `docs/EXTERNAL_SKILLS.md` for pinned commits, licenses, and re‑sync comman
 
 Reanimated v4 requires the **New Architecture** (`newArchEnabled: true` in `app.json`), and worklets
 now live in a separate `react-native-worklets` package. The `expo-router-nativewind` foundation
-skill wires this up; `mobile-animations` is the recipe library (scroll‑driven 3D cards,
-swipe‑to‑island morph, gesture interactions, carousels, Skia effects); `motion-design-principles`
-decides *whether and how much* to animate a given interaction (honoring `useReducedMotion()`,
-200–350ms durations, springs, and UI‑thread‑only work) before `mobile-animations` is used to
-implement it.
+skill wires this up; the `animations` skill holds both the taste layer (*whether and how much* to
+animate — honoring `useReducedMotion()`, 200–350ms durations, springs, UI‑thread‑only work) and the
+recipe library (scroll‑driven 3D cards, swipe‑to‑island morph, gesture interactions, carousels,
+Skia effects) — principles are applied before any recipe is implemented.
 
 ## CI/CD
 

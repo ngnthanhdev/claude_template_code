@@ -11,7 +11,7 @@ Target: $ARGUMENTS
      the current branch vs `main` (`git diff main...HEAD`).
    - A PR number → fetch it (`gh pr diff <PR#>`).
    - A path → review that file/directory's current state, not a diff.
-2. Run the `security-review` skill over the resolved target: trace every
+2. Run the `security` skill (`references/review.md`) over the resolved target: trace every
    untrusted input (mobile deep link, HTTP body/query/param) to its sink,
    and apply the skill's checklist — BOLA/IDOR, mass assignment, DTO
    validation, injection, file upload, secrets, rate limiting, error leakage.
@@ -21,6 +21,6 @@ Target: $ARGUMENTS
    (`apps/mobile`) category. If nothing high-confidence was found, say so
    explicitly rather than padding the report with speculative items.
 
-This complements `/run-layer`'s `code-reviewer` step, which reviews the same
-kind of diff for correctness and simplification — this command is the
-security lens only, not a replacement for that pass.
+`/run-layer`'s `reviewer` already includes this lens; use this command for
+a standalone, deeper security-only pass (e.g. before a release or on an
+external PR).

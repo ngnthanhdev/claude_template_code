@@ -1,0 +1,360 @@
+
+# backend-auth-security
+
+Auth and hardening for `apps/api`: Passport JWT strategy, a default-deny
+global guard with an explicit `@Public()` opt-out, an `RolesGuard` for RBAC,
+CORS, CSRF reasoning, `@fastify/helmet`, secrets via `ConfigService`, and
+where this template stands against the OWASP Top 10.
+
+## Goal
+
+Every route is authenticated by default; a route opts **out** with
+`@Public()`, never the other way around (opting in per-route is one missed
+decorator away from an accidentally-public endpoint). Every secret comes
+from `ConfigService`, never a hard-coded string. RBAC is declarative
+(`@Roles(...)`), not scattered `if (user.role === ...)` checks in service
+methods.
+
+## Passport JWT strategy
+
+```bash
+pnpm --filter api add @nestjs/passport @nestjs/jwt passport passport-jwt
+pnpm --filter api add -D @types/passport-jwt
+```
+
+```ts
+// apps/api/src/auth/jwt.strategy.ts
+import { Injectable } from "@nestjs/common";
+import { PassportStrategy } from "@nestjs/passport";
+import { ExtractJwt, Strategy } from "passport-jwt";
+import { ConfigService } from "@nestjs/config";
+
+interface JwtPayload {
+  sub: string;
+  email: string;
+  roles: string[];
+}
+
+@Injectable()
+export class JwtStrategy extends PassportStrategy(Strategy) {
+  constructor(config: ConfigService) {
+    super({
+      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      ignoreExpiration: false,
+      secretOrKey: config.getOrThrow<string>("JWT_SECRET"),
+    });
+  }
+
+  validate(payload: JwtPayload) {
+    // Whatever this returns becomes `req.user`. Keep it to what the payload
+    // already carries — don't hit the DB on every authenticated request just
+    // to re-fetch the user; re-fetch inside a specific handler if it needs
+    // fresher data than the token carries.
+    return { userId: payload.sub, email: payload.email, roles: payload.roles };
+  }
+}
+```
+
+```ts
+// apps/api/src/auth/auth.module.ts
+import { Module } from "@nestjs/common";
+import { JwtModule } from "@nestjs/jwt";
+import { PassportModule } from "@nestjs/passport";
+import { ConfigService } from "@nestjs/config";
+import { APP_GUARD } from "@nestjs/core";
+import { JwtStrategy } from "./jwt.strategy";
+import { JwtAuthGuard } from "./jwt-auth.guard";
+import { AuthController } from "./auth.controller";
+import { AuthService } from "./auth.service";
+
+@Module({
+  imports: [
+    PassportModule,
+    JwtModule.registerAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        secret: config.getOrThrow<string>("JWT_SECRET"),
+        signOptions: { expiresIn: "15m" }, // short-lived access token; see mobile-auth-state for refresh
+      }),
+    }),
+  ],
+  controllers: [AuthController],
+  providers: [JwtStrategy, AuthService, { provide: APP_GUARD, useClass: JwtAuthGuard }],
+  exports: [AuthService],
+})
+export class AuthModule {}
+```
+
+## Default-deny global guard with an explicit opt-out
+
+Registering `JwtAuthGuard` as `APP_GUARD` makes **every** route
+authenticated unless explicitly marked `@Public()` — a new endpoint is
+secure by default, not by remembering to add a guard:
+
+```ts
+// apps/api/src/auth/public.decorator.ts
+import { SetMetadata } from "@nestjs/common";
+
+export const IS_PUBLIC_KEY = "isPublic";
+export const Public = () => SetMetadata(IS_PUBLIC_KEY, true);
+```
+
+```ts
+// apps/api/src/auth/jwt-auth.guard.ts
+import { ExecutionContext, Injectable } from "@nestjs/common";
+import { AuthGuard } from "@nestjs/passport";
+import { Reflector } from "@nestjs/core";
+import { IS_PUBLIC_KEY } from "./public.decorator";
+
+@Injectable()
+export class JwtAuthGuard extends AuthGuard("jwt") {
+  constructor(private readonly reflector: Reflector) {
+    super();
+  }
+
+  canActivate(context: ExecutionContext) {
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (isPublic) return true;
+    return super.canActivate(context);
+  }
+}
+```
+
+```ts
+// apps/api/src/auth/auth.controller.ts
+import { Body, Controller, Post } from "@nestjs/common";
+import { Public } from "./public.decorator";
+import { AuthService } from "./auth.service";
+import { LoginDto } from "./dto/login.dto"; // createZodDto over a shared-contracts login schema
+
+@Controller("auth")
+export class AuthController {
+  constructor(private readonly auth: AuthService) {}
+
+  @Public()
+  @Post("login")
+  login(@Body() dto: LoginDto) {
+    return this.auth.login(dto);
+  }
+}
+```
+
+## RBAC — `RolesGuard`
+
+```ts
+// apps/api/src/auth/roles.decorator.ts
+import { SetMetadata } from "@nestjs/common";
+
+export type Role = "admin" | "member";
+export const ROLES_KEY = "roles";
+export const Roles = (...roles: Role[]) => SetMetadata(ROLES_KEY, roles);
+```
+
+```ts
+// apps/api/src/auth/roles.guard.ts
+import { CanActivate, ExecutionContext, Injectable } from "@nestjs/common";
+import { Reflector } from "@nestjs/core";
+import type { FastifyRequest } from "fastify";
+import { ROLES_KEY, type Role } from "./roles.decorator";
+
+interface AuthedUser {
+  userId: string;
+  roles: Role[];
+}
+
+@Injectable()
+export class RolesGuard implements CanActivate {
+  constructor(private readonly reflector: Reflector) {}
+
+  canActivate(context: ExecutionContext): boolean {
+    const required = this.reflector.getAllAndOverride<Role[]>(ROLES_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (!required || required.length === 0) return true;
+
+    const req = context.switchToHttp().getRequest<FastifyRequest & { user: AuthedUser }>();
+    return required.some((role) => req.user.roles.includes(role));
+  }
+}
+```
+
+```ts
+@Roles("admin")
+@UseGuards(RolesGuard) // runs after the global JwtAuthGuard has already populated req.user
+@Delete(":id")
+remove(@Param("id") id: string) {
+  return this.posts.remove(id);
+}
+```
+
+`RolesGuard` always runs **after** `JwtAuthGuard` (guard order = declaration
+order; the global one always runs first), so `req.user` is guaranteed
+populated by the time it checks roles.
+
+## CORS and CSRF
+
+```ts
+// apps/api/src/main.ts (excerpt — full bootstrap in nestjs-backend)
+app.enableCors({
+  origin: process.env.CORS_ORIGIN?.split(",") ?? false, // explicit allowlist, never `origin: true` in production
+  credentials: true,
+});
+```
+
+- This template authenticates with a **bearer JWT in the `Authorization`
+  header** (`mobile-patterns`), not a cookie — a header the browser never
+  attaches automatically, so classic CSRF (a malicious site making the
+  browser send an authenticated request without the user's input) doesn't
+  apply to it. CORS above still matters: it's what stops a browser page on
+  another origin from reading the response even if it could send the
+  request.
+- If a future endpoint switches to cookie-based sessions instead of bearer
+  JWT, add `@fastify/csrf-protection` at that point — cookie auth genuinely
+  needs CSRF tokens; bearer-header auth doesn't, and adding CSRF protection
+  to a header-only API is complexity with no corresponding risk it defends
+  against.
+
+## Security headers — `@fastify/helmet`
+
+```bash
+pnpm --filter api add @fastify/helmet
+```
+
+```ts
+// apps/api/src/main.ts (excerpt)
+import helmet from "@fastify/helmet";
+
+await app.register(helmet, {
+  contentSecurityPolicy: process.env.NODE_ENV === "production" ? undefined : false,
+});
+```
+
+Registered as a Fastify plugin (`app.register`), not Express middleware —
+consistent with the Fastify-adapter bootstrap in `backend-patterns`.
+
+## Secrets via `ConfigService`
+
+Never hard-code `JWT_SECRET`, `DATABASE_URL`, or any third-party API key —
+read them through `ConfigService`, backed by `backend-patterns`'s zod-validated
+`envSchema`, sourced from `.env` (gitignored) locally and the deploy
+platform's secret store in every other environment:
+
+```ts
+config.getOrThrow<string>("JWT_SECRET"); // throws at the call site if somehow missing at runtime
+```
+
+`getOrThrow` over plain `.get()` for anything the app cannot run without —
+fail loudly at the point of use rather than silently proceeding with
+`undefined`.
+
+## Broken Object-Level Authorization (BOLA/IDOR) & mass assignment
+
+Authentication proves *who* the caller is; it doesn't prove they're allowed
+to touch the specific record their request names. BOLA/IDOR — a caller
+supplying another user's/tenant's ID and the API happily operating on it —
+is the most common access-control failure in APIs shaped like this
+template's (resource-per-ID routes backed directly by Prisma). Guard against
+it at the **query**, not just the guard/decorator level: a route can pass
+`JwtAuthGuard` and `RolesGuard` and still be exploitable if the Prisma call
+underneath doesn't scope to the caller.
+
+### Mass assignment
+
+Never spread a client-supplied DTO straight into a Prisma write — anything
+the DTO's shape allows, the client can set, including fields that should
+only ever be server-derived (`ownerId`, `role`, `price`, `isVerified`).
+Assign owner/privileged fields explicitly from the authenticated user or a
+server-side default, never from the DTO:
+
+```ts
+// BAD — dto could carry an `ownerId` the client invented, or any other
+// field that happens to match the Prisma model's shape.
+await this.prisma.trip.create({ data: dto });
+
+// GOOD — only the fields the client should control come from dto; the
+// owning relation is set from the authenticated request, never the body.
+await this.prisma.trip.create({
+  data: { name: dto.name, ownerId: authenticatedUser.id },
+});
+```
+
+### Unscoped lookups
+
+A bare `findUnique({ where: { id } })` (or `findFirst`/`update`/`delete`
+keyed only on the record's own ID) trusts that the ID alone is enough to
+authorize the operation — it isn't. Scope every lookup of a
+user-or-tenant-owned resource to the authenticated user, either directly or
+through its parent relation:
+
+```ts
+// BAD — returns the activity regardless of who's asking; any authenticated
+// user who guesses/enumerates an activity ID from another trip gets it.
+await this.prisma.activity.findUnique({ where: { id } });
+
+// GOOD — the activity must belong to the given trip, and the caller must
+// be a member of that trip. No match on either condition returns null,
+// exactly like the record doesn't exist to this caller.
+await this.prisma.activity.findFirst({
+  where: {
+    id: activityId,
+    tripId,
+    trip: { members: { some: { userId: authenticatedUser.id } } },
+  },
+});
+```
+
+Treat a `null` result from a scoped lookup like this as a 404, not a 403 —
+returning 403 (rather than 404) for a resource that exists but isn't the
+caller's confirms the ID is valid to anyone probing it, leaking existence
+information the scoped query was meant to hide.
+
+This is the same discipline `references/review.md` checks for on every diff
+(its BOLA/IDOR and mass-assignment checklist items), and what
+`references/threat-model.md`'s elevation-of-privilege STRIDE category is looking
+for before the code is even written.
+
+**Verification standard:** map access-control findings here to
+**OWASP ASVS** (Application Security Verification Standard) chapter 4
+(Access Control) and chapter 5 (Validation, Sanitization, Encoding) — the
+backend counterpart to MASVS on the mobile side (`references/mobile.md`).
+
+## OWASP Top 10 — where this template stands
+
+| Category | Mitigation in this stack |
+|---|---|
+| Broken Access Control | Default-deny `JwtAuthGuard` + `@Public()` opt-out; `RolesGuard` for RBAC; scoped Prisma lookups against BOLA/IDOR (see above) |
+| Cryptographic Failures | Secrets via `ConfigService`/env only; hash passwords with `argon2`/`bcrypt`, never store plaintext; TLS terminated at the load balancer/platform |
+| Injection | Prisma parameterizes every query (`backend-patterns`); every input validated by `nestjs-zod` before it reaches a service |
+| Insecure Design | Threat-model new features during `brainstorming`/`backend-patterns`, before writing code |
+| Security Misconfiguration | `@fastify/helmet` defaults; explicit CORS allowlist, never `origin: true`; exception filter never leaks stack traces to the client |
+| Vulnerable Components | `pnpm audit` in CI; keep dependencies current |
+| Identification/Auth Failures | Short-lived (15 min) access tokens + rotating refresh tokens (`mobile-patterns`); rate-limit `/auth/login` with `@fastify/rate-limit` |
+| Software/Data Integrity Failures | Committed lockfile (`pnpm-lock.yaml`); verify signatures on any third-party webhook payload before trusting it |
+| Logging/Monitoring Failures | Structured request logging (`backend-patterns`'s `LoggingInterceptor`); never log tokens, passwords, or full request bodies containing secrets |
+| Server-Side Request Forgery | Never fetch a URL supplied by user input without an allowlist; validate/normalize any outbound-URL field through a zod schema first |
+
+## Do
+
+- Register the JWT guard globally (`APP_GUARD`); mark individual routes
+  `@Public()`, never the reverse.
+- Put role checks in `RolesGuard` + `@Roles()`, not inline in service logic.
+- Read every secret through `ConfigService.getOrThrow`.
+- Register `@fastify/helmet` and an explicit CORS origin allowlist.
+
+## Don't
+
+- Don't build a per-route opt-in auth guard — one forgotten decorator on a
+  new endpoint means it's silently public.
+- Don't add CSRF-token middleware to a bearer-JWT-only API — it defends
+  against a risk this auth scheme doesn't have; add it only if/when cookie
+  sessions are introduced.
+- Don't hard-code `JWT_SECRET` or any credential in source — `.env`
+  (gitignored) or the platform's secret store only.
+- Don't let the global exception filter leak a raw stack trace or internal
+  error message to the client in production (`backend-patterns`'s
+  `AllExceptionsFilter` already guards this — don't bypass it with a
+  per-route try/catch that re-exposes the raw error).

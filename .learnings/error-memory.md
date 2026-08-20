@@ -32,7 +32,7 @@ Each entry is a dated heading followed by six labeled fields:
   test failed").
 - **Pattern** — written generally enough to match a *future* error, not
   just restate this one — this is the field `debugger` checks first and
-  `/learn` scans for recurrence.
+  `/checkpoint` (learn step) scans for recurrence.
 - **Prevention** — optional if there's nothing actionable beyond "don't
   repeat the mistake"; omit rather than pad.
 
@@ -45,12 +45,12 @@ Each entry is a dated heading followed by six labeled fields:
   does it fall back to the full reproduce → isolate → fix → regression-test
   loop, then **appends** a new entry here once the failure is actually
   resolved. See `.claude/agents/debugger.md`.
-- `/learn` reviews entries accumulated during the just-finished layer and
+- `/checkpoint` (learn step) reviews entries accumulated during the just-finished layer and
   promotes any **Pattern** that recurred into the owning skill's gotchas —
-  see `.claude/commands/learn.md` and `docs/CONTINUOUS_LEARNING.md`.
+  see `.claude/commands/checkpoint.md` and `docs/CONTINUOUS_LEARNING.md`.
 - Entries are **appended**, never rewritten or deleted — this file is a
   chronological log, not a curated summary (the curated form is the skill
-  gotcha `/learn` promotes it into).
+  gotcha `/checkpoint` (learn step) promotes it into).
 
 ## Entries
 

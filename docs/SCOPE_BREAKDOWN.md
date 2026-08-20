@@ -76,8 +76,8 @@ Each task written into a layer file is a level-3 heading carrying a stable
   the test(s) that must pass.
 - **Skills** — which `.claude/skills/*` the `task-implementer`
   should load before starting (e.g. a mobile form task loads
-  `mobile-data-forms` and `shared-contracts`; a Prisma model task loads
-  `database-orm`).
+  `mobile-patterns` and `shared-contracts`; a Prisma model task loads
+  `backend-patterns`).
 - **Depends** (optional) — another `T-xxxxxx` in the same layer file that
   must run first.
 
@@ -92,7 +92,7 @@ breakdown looks like this:
   - `packages/shared`: zod schemas for `User`, auth request/response shapes.
   - `apps/api`: `AuthModule` (JWT strategy, guards), `UsersModule` with Prisma
     model + migration.
-  - `apps/mobile`: auth screens (`mobile-auth-state`), secure token storage,
+  - `apps/mobile`: auth screens (`mobile-patterns`), secure token storage,
     auth-gated route group.
   - These three groups can mostly run in parallel once the shared schemas
     task lands first within the layer (the schema task has no dependency on
@@ -105,17 +105,17 @@ breakdown looks like this:
 - **Layer 2 — Primary data model and feed:**
   - `apps/api`: the core resource's Prisma model, CRUD endpoints, `nestjs-zod`
     DTOs from `packages/shared`.
-  - `apps/mobile`: feed screen (`mobile-api-integration` + TanStack Query +
+  - `apps/mobile`: feed screen (`mobile-patterns` + TanStack Query +
     FlashList), pull-to-refresh, optimistic create/update
-    (`mobile-data-forms`).
-  - `mobile-animations` + `motion-design-principles`: card entrance/scroll
+    (`mobile-patterns`).
+  - `animations`: card entrance/scroll
     interactions on the feed, gated by the "does this communicate meaning"
     checklist before anything is added.
 - **Layer 3 — Polish and release readiness:**
-  - i18n/theme pass (`mobile-i18n-theme`), EAS build profiles
+  - i18n/theme pass (`mobile-patterns`), EAS build profiles
     (`expo-eas-pipeline`), Maestro e2e flows for the auth + feed happy path
     (`mobile-testing-release`), API integration test suite
-    (`backend-testing`).
+    (`backend-patterns`).
 
 This is illustrative, not prescriptive — the actual layers for a given
 project are whatever `scope-planner` derives from *that* project's approved

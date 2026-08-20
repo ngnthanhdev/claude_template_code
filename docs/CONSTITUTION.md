@@ -6,8 +6,8 @@
 
 This is the authoritative, versioned set of governing principles for this
 project. Every design spec (`docs/specs/`), scope-breakdown plan
-(`tasks/layer-*.md`), individual task, and review (`code-reviewer`,
-`security-reviewer`, `/analyze`) must comply with the Articles below. They
+(`tasks/layer-*.md`), individual task, and review (the `reviewer`
+subagent, `scope-planner`'s self-check) must comply with the Articles below. They
 state **what** this project always upholds and **why** — not **how**; the
 how-to lives in `CLAUDE.md`, `docs/WORKFLOW.md`, `docs/SECURITY.md`, and the
 skills each Article points to.
@@ -92,9 +92,9 @@ history stays reviewable and revertible one unit of work at a time.
 
 Animation earns its place only when it communicates state, direction, or
 causality — never as decoration for its own sake. Every animation respects
-`useReducedMotion()`. The taste layer (`motion-design-principles`) decides
+`useReducedMotion()`. The taste layer (the `animations` skill's principles reference) decides
 whether and how much to animate before the recipe layer
-(`mobile-animations`) is used to implement anything.
+(its recipes reference) is used to implement anything.
 
 ## Amendments
 

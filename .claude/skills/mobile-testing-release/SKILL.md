@@ -59,7 +59,7 @@ test("shows a validation error and does not submit when title is empty", async (
 - Query by what the user sees (`getByText`, `getByRole`, `getByLabelText`),
   never by internal component structure or test IDs unless there's no
   accessible query available.
-- Mock the API/query hook layer (`mobile-api-integration`'s hooks), not
+- Mock the API/query hook layer (the api-integration hooks from `mobile-patterns`), not
   `fetch` directly — a component test shouldn't need to know about the HTTP
   layer underneath.
 - Test business-relevant behavior (validation, empty states, error states,
@@ -122,7 +122,7 @@ maestro test .maestro/sign-in-and-post.yaml
   `development`/`preview` profile, not the Metro dev server) so the flow
   reflects what actually ships.
 - Maestro flows are the right place to catch RTL layout regressions
-  (`mobile-i18n-theme`) and auth-gate regressions (`mobile-auth-state`) —
+  (mobile-patterns' i18n-theme pattern) and auth-gate regressions (its auth-state pattern) —
   both span more than one screen/component.
 
 ## EAS release checklist

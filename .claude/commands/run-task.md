@@ -64,7 +64,6 @@ For each finished worktree:
 Summarize: which tasks were picked up this round and their resulting
 `Status`, which tasks stayed in `ready` waiting on an unmet `Depends`, any
 merge conflicts and their resolution state, and any `blocked` tasks with the
-reason. Remind the user that `review`-status tasks still need `code-reviewer`
-(and `security-reviewer`, per `docs/WORKFLOW.md`) before they're truly
-`done`, and that `/next-layer` still gates on the whole layer's tests
+reason. Remind the user that `review`-status tasks still need the `reviewer` pass
+(per `docs/WORKFLOW.md`) before they're truly `done`, and that `/next-layer` still gates on the whole layer's tests
 passing before advancing.

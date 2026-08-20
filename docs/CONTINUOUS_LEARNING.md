@@ -1,6 +1,6 @@
 # Continuous learning (`.learnings/`)
 
-`CLAUDE.md` `@`-imports this file. `.learnings/` is this template's durable
+Read on demand (not auto-imported). `.learnings/` is this template's durable
 memory for things that cost real time to discover once and shouldn't cost
 time again in a later layer or a later session.
 
@@ -20,10 +20,10 @@ that layer is done.
 things at different times:
 
 - **Topic files** (`.learnings/<topic>.md`) — free-form, one file per
-  topic, written by `/learn` between layers. Prose entries, meant to be
-  read at the start of a future layer.
+  topic, written by `/checkpoint`'s learn step between layers. Prose
+  entries, meant to be read at the start of a future layer.
 - **`.learnings/error-memory.md`** — a single, structured, chronological
-  log written by the `debugger` subagent, not `/learn`. Every entry
+  log written by the `debugger` subagent, not the learn step. Every entry
   follows a fixed seven-field schema (Date · Task · Error · Root Cause ·
   Fix · Pattern · Prevention) — see the schema documented at the top of
   the file itself. `debugger` consults it **first** on any test/build/
@@ -32,30 +32,30 @@ things at different times:
   resolves a failure. See `.claude/agents/debugger.md`.
 
 Where a topic file is a distilled lesson ready to read, `error-memory.md`
-is the raw log that lesson gets distilled *from* — `/learn` mines it for
-recurring **Pattern**s (see below) rather than it being consumed directly
-during a future layer.
+is the raw log that lesson gets distilled *from* — the learn step mines it
+for recurring **Pattern**s (see below) rather than it being consumed
+directly during a future layer.
 
-## The `/learn` command
+## The learn step (part of `/checkpoint`)
 
-Run `/learn` between layers (see `docs/WORKFLOW.md`'s "between layers" step),
-after `/checkpoint` and before `/graph`. It reviews what was *actually*
-discovered while building the layer just finished — not what the spec
-predicted, but what implementation, `code-reviewer`, and `debugger` actually
-surfaced — and extracts:
+The learn step runs as part of `/checkpoint` between layers (see
+`docs/WORKFLOW.md`'s "between layers" step) — there is no separate command.
+It reviews what was *actually* discovered while building the layer just
+finished — not what the spec predicted, but what implementation, the
+`reviewer`, and `debugger` actually surfaced — and extracts:
 
 - **Gotchas that cost real time** — a library quirk, a New
   Architecture/Reanimated setup trap, a Prisma migration surprise, a Fastify
   adapter incompatibility.
 - **Reusable patterns** — a working shape for a `nestjs-zod` DTO, a
   FlashList perf pattern, an animation recipe that turned out better than the
-  canonical one in `mobile-animations`.
-- **Recurring review findings** — anything `code-reviewer` or `debugger`
+  canonical one in the `animations` skill.
+- **Recurring review findings** — anything the `reviewer` or `debugger`
   flagged that's likely to come up again in a future layer.
 - **Recurring error-memory Patterns** — any `.learnings/error-memory.md`
   entry whose **Pattern** has shown up more than once (or is judged likely
   to recur in future layers) gets promoted into the owning skill's
-  gotchas (e.g. `mobile-animations`' "Setup gotchas," or the closest
+  gotchas (e.g. the `animations` recipes' "Setup gotchas," or the closest
   equivalent section in the relevant `.claude/skills/<skill>/SKILL.md`) —
   not left buried in the chronological log for someone to rediscover.
 
@@ -77,8 +77,9 @@ the mistake or to reuse the pattern verbatim, not a full narrative.>
 Source: <file or commit where this was learned, if relevant>
 ```
 
-If a topic file already exists, `/learn` **appends** a new dated entry rather
-than rewriting the file — learnings accumulate, they don't get overwritten.
+If a topic file already exists, the learn step **appends** a new dated
+entry rather than rewriting the file — learnings accumulate, they don't get
+overwritten.
 
 ## What doesn't belong here
 

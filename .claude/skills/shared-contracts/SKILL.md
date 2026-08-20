@@ -1,6 +1,6 @@
 ---
 name: shared-contracts
-description: Use when adding or changing a zod schema in packages/shared that both apps/mobile and apps/api must agree on — a request/response contract, a shared enum, or the @shared/* import path itself. This is the single source of truth both nestjs-backend's createZodDto DTOs and mobile-api-integration's typed client validate against.
+description: Use when adding or changing a zod schema in packages/shared that both apps/mobile and apps/api must agree on — a request/response contract, a shared enum, or the @shared/* import path itself. This is the single source of truth both backend-patterns' createZodDto DTOs and mobile-patterns' typed client validate against.
 ---
 
 # shared-contracts
@@ -124,7 +124,7 @@ export type CreatePostRequest = z.infer<typeof createPostRequestSchema>;
 **`apps/api` side** — `nestjs-zod`'s `createZodDto` wraps the schema
 directly, so the DTO Nest validates against and the schema mobile validates
 against are the literal same object, not two hand-synced copies (see
-`nestjs-backend`):
+`backend-patterns`, references/nestjs.md):
 
 ```ts
 // apps/api/src/modules/posts/dto/create-post.dto.ts
@@ -136,7 +136,7 @@ export class CreatePostDto extends createZodDto(createPostRequestSchema) {}
 
 **`apps/mobile` side** — the typed API client validates the response
 against the same schema before a screen ever sees the data (see
-`mobile-api-integration`):
+`mobile-patterns`, references/api-integration.md):
 
 ```ts
 // apps/mobile/src/api/hooks/use-post.ts

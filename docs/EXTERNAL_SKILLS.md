@@ -7,7 +7,7 @@ pinned commit, with its license preserved — not installed as a live
 dependency. This keeps the skill set reproducible (no surprise upstream
 changes between sessions) and keeps attribution intact.
 
-5 external skills are vendored. Everything else in `.claude/skills/` is
+3 external skills are vendored. Everything else in `.claude/skills/` is
 authored for this template.
 
 ## Vendored skills
@@ -16,9 +16,7 @@ authored for this template.
 |---|---|---|---|---|
 | `react-native-best-practices` | [software-mansion-labs/skills](https://github.com/software-mansion-labs/skills) | `17642737c22758c808004a3d0e64092cf04ae722` | MIT (declared in README + `.claude-plugin/marketplace.json`; no top-level `LICENSE` file upstream — see the vendored `LICENSE` for the reproduced text and provenance note) | `tmp=$(mktemp -d) && git clone --depth 1 https://github.com/software-mansion-labs/skills "$tmp/swm" && rm -rf .claude/skills/react-native-best-practices && cp -R "$tmp/swm/skills/react-native-best-practices" .claude/skills/react-native-best-practices && ( cd "$tmp/swm" && git rev-parse HEAD ) > .claude/skills/react-native-best-practices/.upstream-commit && rm -rf "$tmp"` |
 | `react-native-guidelines` | [vercel-labs/agent-skills](https://github.com/vercel-labs/agent-skills) | `f8a72b9603728bb92a217a879b7e62e43ad76c81` | MIT (declared in README "License" section + the skill's own `SKILL.md` frontmatter; no top-level `LICENSE` file upstream — see the vendored `LICENSE`) | `tmp=$(mktemp -d) && git clone --depth 1 https://github.com/vercel-labs/agent-skills "$tmp/vercel" && rm -rf .claude/skills/react-native-guidelines && cp -R "$tmp/vercel/skills/react-native-skills" .claude/skills/react-native-guidelines && ( cd "$tmp/vercel" && git rev-parse HEAD ) > .claude/skills/react-native-guidelines/.upstream-commit && rm -rf "$tmp"` |
-| `ui-ux-pro-max` | [nextlevelbuilder/ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) | `12b486b22e67f5d887962ef8351c1ac863bfaeb9` | MIT (top-level `LICENSE` file, copied verbatim) | `tmp=$(mktemp -d) && git clone --depth 1 https://github.com/nextlevelbuilder/ui-ux-pro-max-skill "$tmp/uiux" && rm -rf .claude/skills/ui-ux-pro-max && cp -R "$tmp/uiux/.claude/skills/ui-ux-pro-max" .claude/skills/ui-ux-pro-max && ( cd "$tmp/uiux" && git rev-parse HEAD ) > .claude/skills/ui-ux-pro-max/.upstream-commit && rm -rf "$tmp"` |
 | `ponytail` | [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail) | `1b2760d384c44e573a9d8c7a729fac616e5c3a76` | MIT (top-level `LICENSE` file, copied verbatim) | `tmp=$(mktemp -d) && git clone --depth 1 https://github.com/DietrichGebert/ponytail "$tmp/ponytail" && rm -rf .claude/skills/ponytail && cp -R "$tmp/ponytail/skills/ponytail" .claude/skills/ponytail && ( cd "$tmp/ponytail" && git rev-parse HEAD ) > .claude/skills/ponytail/.upstream-commit && rm -rf "$tmp"` |
-| `graphify` | [Graphify-Labs/graphify](https://github.com/Graphify-Labs/graphify) | `53efaf89b68190d367feb73f9ef5dba15899377c` | MIT (top-level `LICENSE` file, copied verbatim) | `tmp=$(mktemp -d) && git clone --depth 1 https://github.com/Graphify-Labs/graphify "$tmp/graphify" && rm -rf .claude/skills/graphify && mkdir -p .claude/skills/graphify && cp "$tmp/graphify/graphify/skill.md" .claude/skills/graphify/SKILL.md && cp -R "$tmp/graphify/graphify/skills/claude/references" .claude/skills/graphify/references && cp "$tmp/graphify/LICENSE" .claude/skills/graphify/LICENSE && ( cd "$tmp/graphify" && git rev-parse HEAD ) > .claude/skills/graphify/.upstream-commit && rm -rf "$tmp"` |
 
 Each vendored folder contains, in addition to the skill content:
 
@@ -30,14 +28,14 @@ Each vendored folder contains, in addition to the skill content:
 - `.upstream-commit` — the exact commit the vendored copy was cut from. Diff
   against a fresh clone at this commit to see if upstream has drifted.
 
-No skill was left install-only — all 5 requested skills carried a
-redistribution-permissive license (MIT in every case), so all 5 were vendored
-in full rather than recorded as an `npx`/plugin-install pointer. `graphify` is
-the one exception to "no live dependency": the skill content itself is fully
-vendored, but the skill is only *useful* once its companion CLI is installed
-separately (see its per-skill note below) — it's a documentation/knowledge
-skill wrapping an external runtime tool, not a self-contained skill like the
-other four.
+No skill was left install-only — all 3 vendored skills carry a
+redistribution-permissive license (MIT in every case), so all 3 are vendored
+in full rather than recorded as an `npx`/plugin-install pointer.
+
+> Historical note: earlier revisions also vendored `ui-ux-pro-max` and
+> `graphify`. Both were dropped in the slim-down pass (large token
+> footprint, low usage in the layer loop); re-add them from their upstream
+> repos if a project needs them.
 
 ### Per-skill notes
 
@@ -56,17 +54,6 @@ other four.
   `metadata.upstream_name` in the frontmatter and called out in a note at the
   top of the vendored `SKILL.md` body. Content (the `rules/` directory of
   focused React Native/Expo lint-style rules) is otherwise unmodified.
-- **`ui-ux-pro-max`** — upstream ships a pre-built, ready-to-use Claude Code
-  skill directory at `.claude/skills/ui-ux-pro-max/` (there's also a
-  `src/ui-ux-pro-max/` "source of truth" used by the repo's own build/CLI to
-  generate per-platform variants — that one has extra/different CSV rows for
-  stacks this template doesn't target, e.g. WPF/UWP/JavaFX, and lacks a
-  `SKILL.md`). We vendored the already-built `.claude/skills/ui-ux-pro-max/`
-  directory: `SKILL.md`, `data/*.csv` (styles, colors, typography, product
-  types, UX guidelines, charts, and 16 per-stack CSVs including
-  `react-native.csv`), and `scripts/*.py` (a small BM25 search engine over
-  the CSVs). No CLI or database initialization is required — the scripts are
-  self-contained stdlib Python 3 that read the local CSVs directly.
 - **`ponytail`** — upstream repo ships the same "lazy senior dev" behavior as
   a skill, a slash command, and native integrations for several other coding
   agents (Cursor rules, Cline rules, Windsurf rules, OpenCode plugin, Gemini
@@ -77,18 +64,6 @@ other four.
   self-contained Claude Code skill (valid `name:`/`description:`/`license:`
   frontmatter, no external references). The plugin/hook/command scaffolding
   for other agents was left upstream, not vendored.
-- **`graphify`** — upstream repo: [Graphify-Labs/graphify](https://github.com/Graphify-Labs/graphify).
-  `SKILL.md` is copied from upstream `graphify/skill.md`; the `references/`
-  directory is copied from upstream `graphify/skills/claude/references/`
-  (8 files: extraction spec, query, update, exports, hooks, add-watch,
-  transcribe, github-and-merge); `LICENSE` is the upstream top-level file,
-  copied verbatim. Unlike the other four vendored skills, `graphify` is not
-  fully self-contained: the skill content only documents how to *use* the
-  tool, and running it for real needs the `graphify` CLI on `PATH`, installed
-  separately with `uv tool install graphifyy` (PyPI package name is
-  `graphifyy`, double `y`; the command it installs is `graphify`). See
-  `docs/GRAPH.md` for the full install/usage flow and `/graphify .` for the
-  vendored skill's invocation.
 
 ## `ponytail` vs the built-in `/simplify` skill — when to use which
 
@@ -113,8 +88,8 @@ merge.
 
 To pick up upstream changes, re-run that skill's re-sync command above, then
 diff the result against the currently vendored folder before committing —
-upstream authors may rename files, change frontmatter, or (as with
-`ui-ux-pro-max`) restructure between a "source" layout and a "built" layout.
+upstream authors may rename files, change frontmatter, or restructure
+between a "source" layout and a "built" layout.
 After re-syncing, re-run the frontmatter check from Task 24:
 
 ```bash

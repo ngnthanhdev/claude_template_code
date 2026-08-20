@@ -19,7 +19,7 @@ optional `Depends`):
 - **Assignee:** ai        <!-- ai | human -->
 - **Files:** apps/api/prisma/schema.prisma, ...
 - **Acceptance:** <checkable definition of done>
-- **Skills:** database-orm, shared-contracts
+- **Skills:** backend-patterns, shared-contracts
 - **Depends:** T-xxxxxx   <!-- optional, omit if none -->
 ```
 
@@ -44,7 +44,7 @@ explicitly notes a `Depends` on another task in this file.
   - `apps/mobile/tsconfig.json` extends `../../tsconfig.base.json`.
   - `pnpm --filter mobile exec tsc --noEmit` passes with no errors.
   - App boots in Expo Go or a dev client with no red-screen errors.
-- **Skills:** expo-router-nativewind, mobile-app-agent
+- **Skills:** expo-router-nativewind, mobile-patterns
 
 ---
 
@@ -63,7 +63,7 @@ explicitly notes a `Depends` on another task in this file.
   - Documented in this task's summary: the exact Expo SDK version chosen and
     confirmation it supports `newArchEnabled: true` with these package
     versions (per the compatibility risk noted in the design spec, §13).
-- **Skills:** mobile-animations, expo-router-nativewind
+- **Skills:** animations, expo-router-nativewind
 - **Depends:** T-13ab58
 
 ---
@@ -82,7 +82,7 @@ explicitly notes a `Depends` on another task in this file.
   - A health-check endpoint (`GET /health`) returns `200`.
   - `pnpm --filter api exec tsc --noEmit` passes with no errors.
   - `pnpm --filter api test` runs (even a single smoke test) and passes.
-- **Skills:** nestjs-backend, database-orm
+- **Skills:** backend-patterns
 
 ---
 

@@ -1,14 +1,13 @@
 ---
 name: expo-router-nativewind
-description: Use when scaffolding apps/mobile for the first time, or touching the root layout, navigation shell, NativeWind/Tailwind config, theming provider, or New Architecture setup — this is the foundation every other mobile skill builds on. Load it before mobile-app-agent, mobile-auth-state, or any screen-level work if the foundation isn't in place yet.
+description: Use when scaffolding apps/mobile for the first time, or touching the root layout, navigation shell, NativeWind/Tailwind config, theming provider, or New Architecture setup — this is the foundation every other mobile skill builds on. Load it before mobile-patterns or any screen-level work if the foundation isn't in place yet.
 ---
 
 # expo-router-nativewind
 
 This is the **foundation skill** for `apps/mobile`. Every other mobile skill
-(`mobile-app-agent`, `mobile-auth-state`, `mobile-api-integration`,
-`mobile-data-forms`, `mobile-i18n-theme`, `mobile-testing-release`,
-`expo-eas-pipeline`, `mobile-animations`) assumes the root layout, NativeWind
+(`mobile-patterns`, `mobile-testing-release`, `expo-eas-pipeline`,
+`animations`) assumes the root layout, NativeWind
 config, and New Architecture setup described here already exist. If
 `apps/mobile` is empty or missing any of this, build it here first — don't
 let a feature task quietly half-invent its own root layout.
@@ -23,7 +22,7 @@ A working Expo Router app shell with:
   the separate `react-native-worklets` package.
 - NativeWind wired through Tailwind config, Metro config, and Babel config.
 - A theme provider exposing light/dark tokens (paired with
-  `mobile-i18n-theme` for the token *contents*; this skill owns the
+  `mobile-patterns` (references/i18n-theme.md) for the token *contents*; this skill owns the
   *plumbing*).
 
 ## Required dependencies
@@ -108,7 +107,7 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Semantic tokens, not raw hexes, so mobile-i18n-theme's light/dark
+        // Semantic tokens, not raw hexes, so the i18n-theme pattern's light/dark
         // pairs can swap the *value* without touching call sites.
         background: "rgb(var(--color-background) / <alpha-value>)",
         foreground: "rgb(var(--color-foreground) / <alpha-value>)",
@@ -184,7 +183,7 @@ app/
 Route groups (`(auth)`, `(app)`) don't affect the URL — they're purely
 organizational and let each area own its own layout/navigator. The
 auth-gating redirect itself (checking session state and routing between
-`(auth)` and `(app)`) is owned by `mobile-auth-state`, not this skill — this
+`(auth)` and `(app)`) is owned by `mobile-patterns` (references/auth-state.md), not this skill — this
 skill only sets up the groups so that logic has somewhere to attach.
 
 ## Theme provider (plumbing only)
@@ -212,7 +211,7 @@ export const useTheme = () => useContext(ThemeContext);
 ```
 
 The actual color token values (the `--color-*` CSS variables per theme) and
-persistence of a manual override are `mobile-i18n-theme`'s job — this
+persistence of a manual override are `mobile-patterns`' (references/i18n-theme.md) job — this
 provider is the wiring both plug into.
 
 ## Do
@@ -233,5 +232,5 @@ provider is the wiring both plug into.
   native dependency has to be reinstalled once it's flipped on later.
 - Don't put `GestureHandlerRootView` inside individual screens; gestures
   outside its subtree silently fail to register.
-- Don't hardcode colors in components — read `mobile-i18n-theme` for the
+- Don't hardcode colors in components — read `mobile-patterns` (references/i18n-theme.md) for the
   token system this config plugs into.

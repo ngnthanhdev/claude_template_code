@@ -2,13 +2,12 @@
 
 This is the full lifecycle this template drives you through: from a fresh
 clone with no code, to a tested, CI-gated product, one dependency-ordered
-layer at a time. `CLAUDE.md` `@`-imports this file so Claude always has it in
-context.
+layer at a time. Read this on demand — `CLAUDE.md` holds only the digest.
 
 ## Authority
 
 `docs/CONSTITUTION.md` is the highest authority in this repository — every
-mechanism below (the layer loop, the review passes, the three discipline
+mechanism below (the layer loop, the review pass, the three discipline
 gates) exists to uphold one or more of its Articles. Where anything in this
 file, a skill, a subagent definition, or `CLAUDE.md` conflicts with the
 constitution, the constitution wins; reconcile the conflict (update the
@@ -19,12 +18,14 @@ guidance, or amend the constitution) rather than following stale guidance.
 ```
 Fresh clone (no design in docs/specs/)
   → PHASE 0 (Plan Mode, HARD GATE): /phase-0 → brainstorming skill → design doc → user approve
-  → SCOPE BREAKDOWN: /scope-breakdown → scope-planner → tasks/layer-*.md
+  → SCOPE BREAKDOWN: /scope-breakdown → scope-planner → tasks/layer-*.md + built-in self-check
        (Layer 0 = scaffold Expo + API + shared + base config + CI)
   → LAYER LOOP (per layer):
-       /run-layer → task-implementer (per-task worktree) → merge → code-reviewer → test-writer
-       /next-layer  [gate: all tests pass]
-  → BETWEEN LAYERS: /checkpoint → CHECKPOINT.md (+ compact context); /learn; /graph
+       /run-layer → ≤2 tasks: sequential on main thread
+                  → 3+ tasks: task-implementer fan-out (per-task worktree) → merge
+                  → reviewer (one pass: correctness + simplification + security)
+       /next-layer  [gate: all tests pass; test-writer only if the layer has cross-task flows]
+  → BETWEEN LAYERS: /checkpoint → CHECKPOINT.md + .learnings/ extraction (+ compact context)
   → REFINEMENT: user reports bug/feature → /refine → brainstorm → layer-refinement-todo.md → implement
 ```
 
@@ -71,57 +72,50 @@ files. Layer 0 is always the foundation layer: scaffolding the Expo app, the
 NestJS API, `packages/shared`, and wiring CI, per the approved stack. See
 `docs/SCOPE_BREAKDOWN.md` for the full layering methodology.
 
-## Consistency gate (`/analyze`)
-
-Before the first `/run-layer` against a freshly generated
-`tasks/layer-N-todo.md`, run `/analyze` — a read-only, main-thread command
-(no subagent dispatched). It cross-checks the approved spec(s) in
-`docs/specs/`, the layering methodology in `docs/SCOPE_BREAKDOWN.md`, and the
-generated task file against each other for: **coverage** (a spec requirement
-with no task, or a task with no spec basis), **consistency**
-(stack/data-shape/ordering contradictions across spec ↔ plan ↔ tasks),
-**constitution compliance** (a task or plan violating a
-`docs/CONSTITUTION.md` Article, cited by number), and **structural gaps**
-(missing `Acceptance`, dangling or cyclic `Depends`, overlapping `Files`
-within a layer). It reports a **PASS** or a ranked list of issues — it never
-edits `docs/specs/`, `docs/SCOPE_BREAKDOWN.md`, or any `tasks/*.md` file
-itself. Treat a non-PASS result as advisory-gating: fix what it finds
-(re-run `/scope-breakdown`, or hand-edit the task file) before starting
-`/run-layer`.
+Before returning, `scope-planner` **self-checks** the file it just wrote
+(this replaced the old standalone `/analyze` command): spec↔task coverage
+both ways, stack/data-shape/ordering consistency, constitution compliance
+(Articles IV, V, VI, VIII — cited by number), and structural integrity
+(non-empty `Acceptance`, real non-cyclic `Depends`, no `Files` overlap
+within the layer). It fixes what it can and reports anything unresolved;
+treat an unresolved flag as advisory-gating — settle it before `/run-layer`.
 
 ## The layer loop
 
-Each layer is worked through the same four-step loop:
+Each layer is worked through the same loop:
 
 1. **`/run-layer`** — Claude reads the current layer's task file
-   (`tasks/layer-N-todo.md`) and fans out every task that has no dependency on
-   another task in the same layer to its own `task-implementer` subagent
-   (model: Sonnet), each running in an **isolated git worktree** so parallel
-   tasks cannot step on each other's working-tree state. Each
-   `task-implementer` picks up its one task, loads the skills that task names,
-   writes a failing test, implements until it passes, and returns a summary —
-   files changed and how it was tested.
+   (`tasks/layer-N-todo.md`). **Small layers (≤ 2 runnable tasks) are
+   implemented sequentially on the main thread** — same TDD discipline, no
+   worktrees, no subagents (spawn overhead outweighs parallelism at that
+   size). For 3+ independent tasks, it fans each out to its own
+   `task-implementer` subagent (model: Sonnet) in an **isolated git
+   worktree** so parallel tasks cannot step on each other's working-tree
+   state. Each `task-implementer` picks up its one task, loads the skills
+   that task names, writes a failing test, implements until it passes, and
+   returns a summary — files changed and how it was tested.
 2. **Merge** — worktrees are merged back into the layer branch. If two tasks
    touched overlapping files despite the dependency analysis, the merge step
    surfaces the conflict explicitly rather than silently resolving it —
    Claude (or the user) decides how to reconcile it.
-3. **`code-reviewer`** (model: Opus) reviews each merged diff for correctness
-   bugs and simplification/reuse opportunities, and reports findings ranked by
-   severity.
-4. **`security-reviewer`** (model: Opus) runs after `code-reviewer` on the
-   same diff — the security lens (BOLA/IDOR, mass assignment, DTO
-   validation, secrets, rate limiting) rather than correctness/simplification.
-   Reports only high-confidence findings, per `docs/SECURITY.md`.
-5. **`test-writer`** (model: Sonnet) adds the integration/e2e coverage that a
-   single-task unit test can't reach — Jest+Supertest flows for the API,
-   React Testing Library flows for mobile, Maestro flows once a release is
-   near.
+3. **`reviewer`** — one pass over the merged diff covering correctness bugs,
+   simplification/reuse, **and** the security lens (BOLA/IDOR, mass
+   assignment, DTO validation, secrets, rate limiting), reporting findings
+   ranked by severity. Default model is Sonnet; **for a layer touching
+   auth, payments, or a new trust boundary, it is invoked on Opus** — and
+   `/security-review` remains available for a standalone deeper pass.
 
 Only once every task in the layer is done, reviewed, and its tests are green
 does `/next-layer` run:
 
-- Verifies the gate: **all tests pass**. If not, the layer isn't finished —
-  loop back into `/run-layer` or `/refine` a fix.
+- Verifies the gate: **all tests pass**. If the layer has cross-task flows
+  (an endpoint a screen calls, a schema both sides share, a
+  release-relevant journey), it first dispatches `test-writer` (model:
+  Sonnet) to cover those seams — Jest+Supertest flows for the API, React
+  Testing Library flows for mobile, Maestro flows near a release. Layers
+  whose tasks are independent skip `test-writer`: task-level tests
+  (Article IV) already gate them. If anything is red, the layer isn't
+  finished — loop back into `/run-layer` or `/refine` a fix.
 - Tags the checkpoint (`git tag layer-N-done`) once the gate passes — the
   rollback point the "Rollback & checkpoints" section of
   `.claude/skills/git-workflow/SKILL.md` resets to if the layer needs to be
@@ -132,18 +126,18 @@ does `/next-layer` run:
 
 ## Between layers
 
-Between finishing one layer and starting the next, run three commands to keep
-the project's memory durable and the session's context small:
+Between finishing one layer and starting the next, run **`/checkpoint`** —
+one command, two jobs:
 
-- **`/checkpoint`** — regenerates `CHECKPOINT.md` from `git log`, `tasks/done.md`,
-  and the layer's key decisions, API contracts, and known issues. Do this
-  before compacting or ending a long session so nothing is lost.
-- **`/learn`** — extracts durable patterns and gotchas discovered in the
-  layer into `.learnings/<topic>.md`, so future layers (and future sessions)
-  don't rediscover the same trap.
-- **`/graph`** — runs `graphify` over the monorepo and summarizes
-  `GRAPH_REPORT.md`, giving a quick dependency-graph sanity check as the
-  codebase grows.
+- Regenerates `CHECKPOINT.md` from `git log`, `tasks/done.md`, and the
+  layer's key decisions, API contracts, and known issues — do this before
+  compacting or ending a long session so nothing is lost.
+- Extracts durable patterns and gotchas discovered in the layer into
+  `.learnings/<topic>.md`, and promotes recurring `error-memory.md`
+  patterns into the owning skill — so future layers (and future sessions)
+  don't rediscover the same trap. See `docs/CONTINUOUS_LEARNING.md`.
+
+Then compact context or start a fresh session for the next layer.
 
 ## Task board (PM view)
 
@@ -171,19 +165,16 @@ up by `/run-layer`.
 | Phase | Command | Subagent invoked | Model |
 |---|---|---|---|
 | Design | `/phase-0` | — (`brainstorming` skill, main thread) | Opus |
-| Scope | `/scope-breakdown` | `scope-planner` | Opus |
-| Consistency gate | `/analyze` | — (main thread, read-only) | — |
+| Scope + self-check | `/scope-breakdown` | `scope-planner` | Opus |
 | Pick work | `/pick-task` | — | — |
-| Implement | `/run-layer` | `task-implementer` (fan-out) | Sonnet |
-| Review | `/run-layer` (post-merge step) | `code-reviewer` | Opus |
-| Security review | `/run-layer` (post-code-reviewer step) / `/security-review` | `security-reviewer` | Opus |
-| Layer tests | `/next-layer` (pre-gate step) | `test-writer` | Sonnet |
+| Implement | `/run-layer` | `task-implementer` (fan-out, 3+ tasks) or main thread (≤2) | Sonnet |
+| Review | `/run-layer` (post-merge step) | `reviewer` | Sonnet (Opus for auth/payment/trust-boundary layers) |
+| Layer tests | `/next-layer` (pre-gate, only for cross-task flows) | `test-writer` | Sonnet |
 | Advance | `/next-layer` | — | — |
-| Checkpoint | `/checkpoint` | — | — |
-| Learn | `/learn` | — | — |
-| Graph | `/graph` | — | — |
+| Checkpoint + learn | `/checkpoint` | — | — |
 | Bug/feature | `/refine` | — (brainstorm, main thread) | Opus |
-| Threat model | `/threat-model` | — (`security-threat-model` skill, main thread) | Opus |
+| Security deep-pass | `/security-review` | — (`security` skill, main thread) | — |
+| Threat model | `/threat-model` | — (`security` skill, main thread) | Opus |
 | Debug | — (ad hoc) | `debugger` | Opus |
 
 ## The three discipline gates

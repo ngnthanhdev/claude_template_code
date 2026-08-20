@@ -47,8 +47,8 @@ these to that provider's mechanism:
 |---|---|
 | `DATABASE_URL` | Postgres connection string (Prisma) — a different value per environment, never shared |
 | `JWT_SECRET` | Auth token signing — a different value per environment; never reuse a dev value in staging/prod |
-| `PORT` | Fastify listen port (`nestjs-backend`'s bootstrap reads `process.env.PORT`) — most providers inject this themselves; only set it manually on a VPS |
-| `CORS_ORIGIN` | Comma-separated allowed origins (also read in `nestjs-backend`'s bootstrap) — the mobile app's EAS Update URL / your web origin, per environment |
+| `PORT` | Fastify listen port (`backend-patterns`'s bootstrap reads `process.env.PORT`) — most providers inject this themselves; only set it manually on a VPS |
+| `CORS_ORIGIN` | Comma-separated allowed origins (also read in `backend-patterns`'s bootstrap) — the mobile app's EAS Update URL / your web origin, per environment |
 
 ## Promotion flow
 

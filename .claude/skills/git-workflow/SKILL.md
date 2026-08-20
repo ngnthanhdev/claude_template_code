@@ -36,7 +36,7 @@ lint/typecheck/test green.
 | `ci` | Changes to `.github/workflows/*` |
 
 `scope` is the area touched — a skill name, a module, a package
-(`feat(skill): mobile-animations recipe library`, `fix(auth): rotate refresh
+(`feat(skill): animations recipe library`, `fix(auth): rotate refresh
 token before expiry`, `chore(deps): bump nestjs-zod`). Keep the subject line
 imperative and under ~70 characters (`add`, not `added`/`adds`); put any
 necessary detail in the body, not a run-on subject.
@@ -115,7 +115,7 @@ outside the fan-out flow):
 - [ ] If the PR changes `packages/shared`, both `apps/api` and `apps/mobile`
       were checked against the new contract shape (`shared-contracts`) —
       not just one consumer.
-- [ ] `code-reviewer`'s findings (if it ran on this diff) are addressed or
+- [ ] `reviewer`'s findings (if it ran on this diff) are addressed or
       explicitly deferred with a reason, not silently ignored.
 
 ## Rollback & checkpoints

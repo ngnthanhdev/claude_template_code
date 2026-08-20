@@ -37,6 +37,22 @@ implementation — you never write application code.
 4. **Emit exactly one file**: `tasks/layer-N-todo.md` for the next unbuilt
    layer (do not pre-generate every future layer — later layers may need to
    react to what was actually decided while building earlier ones).
+5. **Self-check the file you just wrote** before returning (this replaces
+   the old standalone `/analyze` gate):
+   - **Coverage** — every spec requirement in scope for this layer has a
+     task; every task traces back to a spec requirement (no scope creep).
+   - **Consistency** — no task assumes a library outside the locked stack,
+     a data shape that disagrees with the spec, or something only a later
+     layer builds.
+   - **Constitution** — every task has a test in `Acceptance` (Article IV),
+     `Files` scoped to spec (Article VIII), server-side ownership checks
+     for authz/data-access tasks (Article VI), no implied hard-coded
+     secrets (Article V). Cite Article numbers for anything you flag.
+   - **Structure** — non-empty `Acceptance`; `Depends` names a real
+     `T-xxxxxx` in the same file, no cycles; no `Files` overlap between two
+     tasks in the layer (that breaks parallel fan-out).
+   Fix what you find, then state in your summary what was checked and
+   anything you could not resolve (e.g. a spec ambiguity).
 
 ## Task block format
 

@@ -31,7 +31,7 @@ isolated the root cause.
    editing anything.
 5. **Fix minimally.** Change only what's needed to correct the identified
    mechanism. Do not refactor unrelated code while you're in there — that's
-   `code-reviewer`/`/simplify` territory, not a debugging session.
+   `reviewer` territory, not a debugging session.
 6. **Add a regression test.** The reproduction from step 2 becomes a
    permanent test so this exact bug can't silently come back.
 7. **Verify.** Re-run the full local test suite for the affected package

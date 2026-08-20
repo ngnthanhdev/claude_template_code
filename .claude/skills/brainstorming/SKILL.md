@@ -131,7 +131,7 @@ correctly. A useful section order (mirrors this template's own design doc):
    schemas, request/response shapes.
 4. **Mobile screens and navigation** — Expo Router routes, the screens
    touched, key interaction/animation notes (deferred to
-   `motion-design-principles` + `mobile-animations` for the *how*).
+   the `animations` skill for the *how*).
 5. **Testing strategy** — for this feature's specific risk areas, not a
    generic restatement of `docs/CI_CD.md`.
 6. **Non-goals** — explicitly what's *not* being built now, to block scope

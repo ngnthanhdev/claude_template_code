@@ -36,7 +36,7 @@ Every host has an env var / secrets mechanism in its dashboard or CLI —
 `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGIN` always go there, never in the
 Dockerfile or a committed file (Constitution Article V,
 `docs/CONSTITUTION.md`). Most hosts inject their own `PORT`; check whether
-yours does before hard-coding one — `nestjs-backend`'s bootstrap already
+yours does before hard-coding one — `backend-patterns`'s bootstrap already
 reads `process.env.PORT ?? 3000`, so it adapts either way. See
 `docs/deploy/environments.md` for which vars are required and the
 per-environment isolation rule (separate DB, separate secrets — staging
@@ -54,7 +54,7 @@ check against the same path so you at least get alerted.
 ## 5. Notes
 
 - Confirm your host runs the container listening on `0.0.0.0` (not
-  `localhost`/`127.0.0.1`) — `nestjs-backend`'s Fastify bootstrap already
+  `localhost`/`127.0.0.1`) — `backend-patterns`'s Fastify bootstrap already
   does this, but it's the #1 "works locally, unreachable when deployed"
   mistake with containerized Node APIs.
 - Confirm the host actually uses `apps/api` as the Docker build context
