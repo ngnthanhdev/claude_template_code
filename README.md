@@ -4,6 +4,10 @@ A native‑first Claude Code starter template for building an **Expo mobile app 
 monorepo through a disciplined Brainstorm → Design → Layer → Implement → Test → Checkpoint → Refine
 workflow.
 
+![Realtime task board — drag a card into Ready and /run-task picks it up; statuses update live as the AI works the layer](docs/assets/board-demo.gif)
+
+<p align="center"><em>The realtime task board (<code>pnpm board</code>) watching a Layer 0 task move Todo → Ready → In&nbsp;Progress → Review → Done.</em></p>
+
 ## What this is
 
 This repo is **not** a finished app — it's a template. It ships a complete pnpm + Turborepo
